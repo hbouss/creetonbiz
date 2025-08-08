@@ -2,25 +2,47 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlmodel import select
 import json
-
+import logging
 from backend.schemas import ProfilRequest, BusinessResponse
 from backend.models import BusinessIdea
 from backend.db import get_session
 from backend.services.openai_service import generate_business_idea
-from backend.dependencies import get_current_user, get_current_user_optional, require_infinity_or_startnow
+from backend.dependencies import (
+    get_current_user,
+    get_current_user_optional,
+    require_infinity_or_startnow,
+)
 
-router = APIRouter(prefix="/api", tags=["public"])  # /api/*
+router = APIRouter(prefix="/api", tags=["public"])
+logger = logging.getLogger(__name__)
+
 
 @router.post("/generate", response_model=BusinessResponse)
-async def generate(profil: ProfilRequest, user = Depends(get_current_user_optional),):
-    raw = generate_business_idea(profil.model_dump())
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        raise HTTPException(500, detail="Réponse IA non au format JSON")
+async def generate(
+    profil: ProfilRequest,
+    user=Depends(get_current_user_optional),
+):
+    max_attempts = 3
+    raw = None
+    data = None
 
+    for attempt in range(1, max_attempts + 1):
+        raw = generate_business_idea(profil.model_dump())
+        try:
+            data = json.loads(raw)
+            break
+        except json.JSONDecodeError:
+            logger.warning(f"[generate] tentative {attempt} échouée, JSON invalide : {raw!r}")
+            if attempt == max_attempts:
+                # on remonte l'erreur après la dernière tentative
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Réponse IA non au format JSON (après {max_attempts} essais). Contenu reçu : {raw}"
+                )
+
+        # à ce stade `data` est un dict valide
     with get_session() as session:
-        record = BusinessIdea(
+        idea = BusinessIdea(
             user_id=user.id if user else None,
             secteur=profil.secteur,
             objectif=profil.objectif,
@@ -29,13 +51,15 @@ async def generate(profil: ProfilRequest, user = Depends(get_current_user_option
             persona=data["persona"],
             nom=data["nom"],
             slogan=data["slogan"],
-            raw=raw
+            raw=raw,
+            potential_rating=data.get("potential_rating"),
         )
-        session.add(record)
+        session.add(idea)
         session.commit()
-        session.refresh(record)
+        session.refresh(idea)
 
-    return BusinessResponse.from_orm(record)
+    return BusinessResponse.from_orm(idea)
+
 
 @router.get("/ideas", response_model=list[BusinessResponse])
 def list_ideas():
@@ -43,45 +67,24 @@ def list_ideas():
         records = session.exec(
             select(BusinessIdea).order_by(BusinessIdea.created_at.desc())
         ).all()
-    return [
-        BusinessResponse(
-            id=r.id,
-            idee=r.idee,
-            persona=r.persona,
-            nom=r.nom,
-            slogan=r.slogan,
-            raw=r.raw
-        )
-        for r in records
-    ]
+    # on renvoie tout le model Pydantic directement
+    return [BusinessResponse.from_orm(r) for r in records]
+
 
 @router.get(
     "/me/ideas",
     response_model=list[BusinessResponse],
     dependencies=[Depends(require_infinity_or_startnow)],
 )
-def list_my_ideas(user = Depends(get_current_user)):
+def list_my_ideas(user=Depends(get_current_user)):
     with get_session() as session:
         items = session.exec(
             select(BusinessIdea)
             .where(BusinessIdea.user_id == user.id)
             .order_by(BusinessIdea.created_at.desc())
         ).all()
-    return [
-        BusinessResponse(
-            id=r.id,
-            idee=r.idee,
-            persona=r.persona,
-            nom=r.nom,
-            slogan=r.slogan,
-            raw=r.raw,
-            secteur=r.secteur,
-            objectif=r.objectif,
-            competences=r.competences,
-            created_at=r.created_at,
-        )
-        for r in items
-    ]
+    return [BusinessResponse.from_orm(r) for r in items]
+
 
 @router.delete(
     "/me/ideas/{idea_id}",
@@ -92,9 +95,6 @@ def delete_idea(idea_id: int, user=Depends(get_current_user)):
     """
     Supprime une idée générée par l’utilisateur.
     """
-    from backend.models import BusinessIdea
-    from backend.db import get_session
-
     with get_session() as session:
         idea = session.get(BusinessIdea, idea_id)
         if not idea or idea.user_id != user.id:
@@ -102,4 +102,3 @@ def delete_idea(idea_id: int, user=Depends(get_current_user)):
         session.delete(idea)
         session.commit()
     return
-

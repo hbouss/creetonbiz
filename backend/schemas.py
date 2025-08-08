@@ -22,6 +22,7 @@ class BusinessResponse(BaseModel):
     objectif: str
     competences: List[str]
     created_at: datetime
+    potential_rating: float
 
     model_config = {
         "from_attributes": True,

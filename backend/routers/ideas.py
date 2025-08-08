@@ -31,6 +31,7 @@ def list_my_ideas(user = Depends(get_current_user)):
             objectif      = r.objectif,
             competences   = r.competences,
             created_at    = r.created_at,
+            potential_rating=r.potential_rating,
         )
         for r in records
     ]

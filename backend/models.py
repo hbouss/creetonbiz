@@ -20,6 +20,7 @@ class BusinessIdea(SQLModel, table=True):
     slogan: str
     raw: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    potential_rating: float = Field(default=0, nullable=False)
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
