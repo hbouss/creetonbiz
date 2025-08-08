@@ -1,4 +1,6 @@
 # backend/schemas.py
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 
@@ -8,11 +10,23 @@ class ProfilRequest(BaseModel):
     competences: List[str]
 
 class BusinessResponse(BaseModel):
+    id: Optional[int] = None
     idee: str
     persona: str
     nom: str
     slogan: str
     raw: Optional[str]
+
+    # ↘ Nouveaux champs :
+    secteur: str
+    objectif: str
+    competences: List[str]
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+        "populate_by_name": True,
+    }
 
 # Premium response models
 class OfferResponse(BaseModel):

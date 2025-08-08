@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceTech Startup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding: 10px 0;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        ul {
+            padding: 0;
+            list-style: none;
+        }
+        nav ul {
+            display: flex;
+            justify-content: space-around;
+        }
+        nav ul li a {
+            color: #fff;
+            text-decoration: none;
+            padding: 5px 20px;
+            display: inline-block;
+        }
+        .showcase {
+            background: url('space-background.jpg') no-repeat center center/cover;
+            color: #fff;
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .showcase h1 {
+            font-size: 40px;
+            margin-bottom: 0;
+        }
+        .showcase p {
+            font-size: 20px;
+        }
+        .services, .contact {
+            padding: 20px 0;
+        }
+        .service, .contact-form {
+            flex: 1;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .services {
+            background: #f4f4f4;
+        }
+        .services h2, .contact h2 {
+            text-align: center;
+        }
+        .flex {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        footer {
+            background: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+        }
+        @media (max-width: 768px) {
+            nav ul {
+                flex-direction: column;
+            }
+            .flex {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>SpaceTech Startup</h1>
+            <nav>
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <section class="showcase">
+        <div class="container">
+            <h1>Innovative Solutions for the Space Industry</h1>
+            <p>Developing cutting-edge applications with AI and web technologies.</p>
+        </div>
+    </section>
+    <section class="services" id="services">
+        <div class="container">
+            <h2>Our Expertise</h2>
+            <div class="flex">
+                <div class="service">
+                    <h3>Web Development</h3>
+                    <p>Building responsive and efficient web applications tailored for space industry needs.</p>
+                </div>
+                <div class="service">
+                    <h3>Mobile App Solutions</h3>
+                    <p>Creating user-friendly mobile applications that connect space technology to users worldwide.</p>
+                </div>
+                <div class="service">
+                    <h3>AI & Machine Learning</h3>
+                    <p>Implementing AI solutions to enhance data analysis and decision-making in space operations.</p>
+                </div>
+                <div class="service">
+                    <h3>Social Media Integration</h3>
+                    <p>Boosting engagement through strategic social media presence and integration.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="contact" id="contact">
+        <div class="container">
+            <h2>Contact Us</h2>
+            <div class="flex">
+                <div class="contact-form">
+                    <form action="#">
+                        <input type="text" placeholder="Name" required>
+                        <input type="email" placeholder="Email" required>
+                        <textarea placeholder="Message" required></textarea>
+                        <button type="submit">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+    <footer>
+        <p>SpaceTech Startup &copy; 2023</p>
+    </footer>
+</body>
+</html>

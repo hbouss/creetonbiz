@@ -1,27 +1,47 @@
-import { createContext, useState, useEffect } from "react";
+import React, { createContext, useEffect, useState, useMemo } from "react";
+import { getMe } from "../api";
 
-export const AuthContext = createContext();
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(null);
+  // Lis/écris la même clé que dans api.js
+  const [token, setToken] = useState(() => localStorage.getItem("auth_token"));
+  const [user, setUser] = useState(null); // { id, email, plan }
 
+  // Quand le token change : persiste + (re)charge le profil
   useEffect(() => {
-    const t = localStorage.getItem("token");
-    if (t) setToken(t);
-  }, []);
+    if (token) {
+      localStorage.setItem("auth_token", token);
+      refreshMe(); // récupère {id,email,plan} via /api/me
+    } else {
+      localStorage.removeItem("auth_token");
+      setUser(null);
+    }
+  }, [token]);
 
-  const login = (t) => {
-    localStorage.setItem("token", t);
-    setToken(t);
-  };
-  const logout = () => {
-    localStorage.removeItem("token");
+  // Récupère l'utilisateur depuis l'API
+  async function refreshMe() {
+    try {
+      const me = await getMe();
+      setUser(me);
+    } catch {
+      // 401 etc. → on invalide le profil mais on ne casse pas la session tout de suite
+      setUser(null);
+    }
+  }
+
+  // Connexion / Déconnexion
+  function login(newToken) {
+    setToken(newToken);
+  }
+  function logout() {
     setToken(null);
-  };
+  }
 
-  return (
-    <AuthContext.Provider value={{ token, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ token, user, login, logout, refreshMe }),
+    [token, user]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

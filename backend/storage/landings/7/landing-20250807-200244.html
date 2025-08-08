@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assurance Innovante</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 0; padding: 0;}
+        header {background-color: #4CAF50; color: white; padding: 10px 0; text-align: center;}
+        nav ul {list-style-type: none; padding: 0;}
+        nav ul li {display: inline; margin: 0 10px;}
+        .hero {background-image: url('insurance-bg.jpg'); background-size: cover; color: white; text-align: center; padding: 100px 20px;}
+        .content {padding: 20px;}
+        .services {display: flex; flex-wrap: wrap; justify-content: space-around;}
+        .service {flex: 1 1 calc(33% - 20px); margin: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); padding: 20px; text-align: center;}
+        .footer {background-color: #333; color: white; text-align: center; padding: 20px 0;}
+        @media (max-width: 768px) {
+            .service {flex: 1 1 100%;}
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Assurance Innovante</h1>
+        <nav>
+            <ul>
+                <li><a href="#" style="color: white;">Accueil</a></li>
+                <li><a href="#" style="color: white;">À Propos</a></li>
+                <li><a href="#" style="color: white;">Services</a></li>
+                <li><a href="#" style="color: white;">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    <section class="hero">
+        <h2>La Nouvelle Génération d'Assurance</h2>
+        <p>Intégrant le web, les apps et l'intelligence artificielle pour vous offrir le meilleur.</p>
+    </section>
+    <section class="content">
+        <h2>Nos Services</h2>
+        <div class="services">
+            <div class="service">
+                <h3>Développement Web</h3>
+                <p>Des solutions web sur-mesure pour optimiser votre expérience utilisateur.</p>
+            </div>
+            <div class="service">
+                <h3>Développement d'Applications</h3>
+                <p>Créez des applications performantes et intuitives pour vos clients.</p>
+            </div>
+            <div class="service">
+                <h3>Développement IA</h3>
+                <p>Intégrez l'intelligence artificielle pour des services d'assurance plus intelligents.</p>
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+        <p>&copy; 2023 Assurance Innovante. Tous droits réservés.</p>
+    </footer>
+</body>
+</html>

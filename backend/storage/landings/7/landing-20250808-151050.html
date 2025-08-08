@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenue chez ModeChic</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        header { background-color: #333; color: #fff; padding: 10px 0; text-align: center; }
+        nav ul { list-style: none; padding: 0; }
+        nav ul li { display: inline; margin: 0 10px; }
+        nav ul li a { color: #fff; text-decoration: none; }
+        .hero { background-image: url('fashion-store.jpg'); background-size: cover; padding: 100px 0; text-align: center; color: white; }
+        .hero h1 { font-size: 3em; }
+        .hero p { font-size: 1.2em; }
+        .content { padding: 20px; }
+        .content h2 { text-align: center; }
+        .gallery { display: flex; flex-wrap: wrap; justify-content: center; }
+        .gallery img { width: 200px; margin: 10px; }
+        footer { background-color: #333; color: #fff; text-align: center; padding: 10px 0; }
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 2em; }
+            .gallery { flex-direction: column; align-items: center; }
+            .gallery img { width: 100%; max-width: 300px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ModeChic</h1>
+        <nav>
+            <ul>
+                <li><a href="#">Accueil</a></li>
+                <li><a href="#">À propos</a></li>
+                <li><a href="#">Collections</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="hero">
+        <h1>Découvrez la Mode Élégante</h1>
+        <p>Visitez notre boutique pour les dernières tendances.</p>
+    </div>
+    <div class="content">
+        <h2>Nos Collections</h2>
+        <div class="gallery">
+            <img src="collection1.jpg" alt="Collection 1">
+            <img src="collection2.jpg" alt="Collection 2">
+            <img src="collection3.jpg" alt="Collection 3">
+        </div>
+    </div>
+    <footer>
+        <p>Suivez-nous sur</p>
+        <p>
+            <a href="#" style="color: #fff;">Instagram</a> |
+            <a href="#" style="color: #fff;">Facebook</a> |
+            <a href="#" style="color: #fff;">Twitter</a>
+        </p>
+        <p>© 2023 ModeChic. Tous droits réservés.</p>
+    </footer>
+</body>
+</html>

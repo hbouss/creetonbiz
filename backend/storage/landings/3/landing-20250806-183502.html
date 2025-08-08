@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beauty Startup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        header {
+            background: #f8b4b4;
+            color: #fff;
+            padding: 1rem 0;
+            text-align: center;
+        }
+        nav ul {
+            display: flex;
+            justify-content: center;
+            padding: 0;
+        }
+        nav ul li {
+            list-style: none;
+            margin: 0 15px;
+        }
+        nav ul li a {
+            color: #fff;
+            text-decoration: none;
+        }
+        .hero {
+            background: url('https://via.placeholder.com/1200x600') no-repeat center center/cover;
+            height: 600px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 3rem;
+        }
+        .content {
+            padding: 2rem;
+        }
+        .services, .contact {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .services div, .contact div {
+            flex: 1 1 300px;
+            margin: 10px;
+            padding: 20px;
+            background: #f4f4f4;
+            border-radius: 5px;
+        }
+        footer {
+            background: #333;
+            color: #fff;
+            text-align: center;
+            padding: 1rem 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            nav ul {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Beauty Startup</h1>
+        <nav>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    <section class="hero">
+        <h1>Welcome to the Future of Beauty</h1>
+    </section>
+    <section class="content services" id="services">
+        <div>
+            <h2>Web Development</h2>
+            <p>We offer cutting-edge web development services to bring your beauty business online.</p>
+        </div>
+        <div>
+            <h2>SEO Optimization</h2>
+            <p>Improve your online presence with our expert SEO services tailored for beauty startups.</p>
+        </div>
+        <div>
+            <h2>UI/UX Design</h2>
+            <p>Create stunning and user-friendly designs that engage and captivate your audience.</p>
+        </div>
+    </section>
+    <section class="content contact" id="contact">
+        <div>
+            <h2>Contact Us</h2>
+            <p>Email: info@beautystartup.com</p>
+            <p>Phone: +123 456 7890</p>
+        </div>
+        <div>
+            <h2>Follow Us</h2>
+            <p>Facebook | Instagram | Twitter</p>
+        </div>
+    </section>
+    <footer>
+        <p>&copy; 2023 Beauty Startup. All rights reserved.</p>
+    </footer>
+</body>
+</html>

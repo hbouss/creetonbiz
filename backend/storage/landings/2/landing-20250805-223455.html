@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beauty Business Solutions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        header {
+            background-color: #f8b400;
+            padding: 20px;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            color: #fff;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #333;
+        }
+        nav a {
+            color: #fff;
+            padding: 15px 20px;
+            text-decoration: none;
+        }
+        nav a:hover {
+            background-color: #555;
+        }
+        .container {
+            padding: 20px;
+        }
+        .services {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .service {
+            background-color: #f4f4f4;
+            border-radius: 5px;
+            margin: 10px;
+            padding: 20px;
+            flex: 1 1 30%;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .services {
+                flex-direction: column;
+                align-items: center;
+            }
+            .service {
+                flex: 1 1 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Beauty Business Solutions</h1>
+    </header>
+    <nav>
+        <a href="#services">Services</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+    </nav>
+    <div class="container">
+        <section id="services">
+            <h2>Our Services</h2>
+            <div class="services">
+                <div class="service">
+                    <h3>Web Development</h3>
+                    <p>Build your online presence with our expert web development services tailored for the beauty industry.</p>
+                </div>
+                <div class="service">
+                    <h3>App Development</h3>
+                    <p>Enhance client engagement with custom mobile apps designed for beauty salons.</p>
+                </div>
+                <div class="service">
+                    <h3>AI Solutions</h3>
+                    <p>Integrate AI to optimize appointments, customer service, and more.</p>
+                </div>
+                <div class="service">
+                    <h3>Salon Management</h3>
+                    <p>Streamline your operations with our comprehensive salon management tools.</p>
+                </div>
+                <div class="service">
+                    <h3>Social Media Marketing</h3>
+                    <p>Boost your brand with strategic social media campaigns.</p>
+                </div>
+            </div>
+        </section>
+        <section id="about">
+            <h2>About Us</h2>
+            <p>We are dedicated to empowering beauty businesses with innovative technology solutions that drive growth and enhance client experiences.</p>
+        </section>
+        <section id="contact">
+            <h2>Contact Us</h2>
+            <p>Email: info@beautybusiness.com</p>
+            <p>Phone: +123 456 7890</p>
+        </section>
+    </div>
+    <footer>
+        <p>&copy; 2023 Beauty Business Solutions. All rights reserved.</p>
+    </footer>
+</body>
+</html>

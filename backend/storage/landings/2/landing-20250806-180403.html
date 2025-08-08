@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>InnovateTech - Pioneering the Future</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            color: #333;
+        }
+        header {
+            background: #0077cc;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background: #005fa3;
+        }
+        nav a {
+            color: #fff;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+        nav a:hover {
+            background-color: #004080;
+        }
+        .hero {
+            background: url('https://source.unsplash.com/1600x900/?technology') no-repeat center center/cover;
+            height: 70vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 3em;
+            margin: 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .content h2 {
+            text-align: center;
+            color: #0077cc;
+        }
+        .content p {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .services {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .service {
+            flex: 1 1 calc(33.333% - 20px);
+            box-sizing: border-box;
+            padding: 20px;
+            margin: 10px;
+            background: #f4f4f4;
+            text-align: center;
+        }
+        footer {
+            background: #0077cc;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+        @media (max-width: 768px) {
+            .services {
+                flex-direction: column;
+            }
+            .service {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>InnovateTech</h1>
+        <p>Pioneering the Future of Electronics and AI</p>
+    </header>
+    <nav>
+        <a href="#">Home</a>
+        <a href="#services">Services</a>
+        <a href="#about">About Us</a>
+        <a href="#contact">Contact</a>
+    </nav>
+    <section class="hero">
+        <h1>Leading Innovation in Electronics & AI</h1>
+    </section>
+    <section class="content">
+        <h2>What We Do</h2>
+        <p>At InnovateTech, we leverage the power of cutting-edge technology to provide innovative solutions in the electronics and AI sectors. Our startup is dedicated to pushing the boundaries of technology to create a smarter, more connected world.</p>
+    </section>
+    <section id="services" class="services">
+        <div class="service">
+            <h3>Web Development</h3>
+            <p>Creating robust and scalable web solutions tailored to your business needs.</p>
+        </div>
+        <div class="service">
+            <h3>Artificial Intelligence</h3>
+            <p>Integrating AI technologies to enhance efficiency and innovation.</p>
+        </div>
+        <div class="service">
+            <h3>Innovative Solutions</h3>
+            <p>Developing products that redefine industry standards and drive progress.</p>
+        </div>
+    </section>
+    <footer>
+        <p>&copy; 2023 InnovateTech. All rights reserved.</p>
+    </footer>
+</body>
+</html>

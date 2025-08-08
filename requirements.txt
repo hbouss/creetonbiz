@@ -8,3 +8,6 @@ psycopg2-binary
 sqlalchemy
 httpx
 PyJWT
+python-multipart
+stripe>=12.0.0
+reportlab
