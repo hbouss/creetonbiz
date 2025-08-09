@@ -4,8 +4,7 @@ from pydantic import BaseModel
 from sqlmodel import select
 from backend.db import get_session
 from backend.dependencies import get_current_user
-from backend.models import User
-from backend.models import Project, Deliverable
+from backend.models import Project, Deliverable, BusinessIdea
 from sqlalchemy import delete
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -38,20 +37,37 @@ def list_projects(user=Depends(get_current_user)):
 # backend/routers/projects.py  ───────────
 @router.post("", status_code=201)
 def create_project(body: CreateProjectBody, user=Depends(get_current_user)):
-    # ⛔️ NE consommons plus de crédit ici !
-    proj = Project(
-        user_id=user.id,
-        title=body.title.strip() or "Mon projet",
-        secteur=body.secteur,
-        objectif=body.objectif,
-        competences=body.competences,
-        premium_unlocked=False,          # ← explicite
-        idea_id=body.idea_id,  # ← si conversion d’idée
-    )
+    idea_snapshot = None
     with get_session() as s:
+        if body.idea_id:
+            idea = s.get(BusinessIdea, body.idea_id)
+            if not idea or idea.user_id != user.id:
+                raise HTTPException(status_code=404, detail="Idée introuvable ou non autorisée")
+            # 🧊 Snapshot exact (on garde les textes tels quels)
+            idea_snapshot = {
+                "id": idea.id,
+                "idee": idea.idee,
+                "persona": idea.persona,
+                "nom": idea.nom,
+                "slogan": idea.slogan,
+                "potential_rating": getattr(idea, "potential_rating", None),
+                "raw": idea.raw,   # garde aussi le JSON brut d’origine
+            }
+
+        proj = Project(
+            user_id=user.id,
+            title=body.title.strip() or "Mon projet",
+            secteur=body.secteur,
+            objectif=body.objectif,
+            competences=body.competences,
+            premium_unlocked=False,
+            idea_id=body.idea_id,
+            idea_snapshot=idea_snapshot,  # 👈 on sauvegarde
+        )
         s.add(proj)
         s.commit()
         s.refresh(proj)
+
     return {"id": proj.id}
 
 @router.delete(

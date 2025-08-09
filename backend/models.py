@@ -55,6 +55,12 @@ class Project(SQLModel, table=True):
     # ← NOUVEAU : lien vers l’idée d’origine (null si manuel)
     idea_id: Optional[int] = Field(default=None, foreign_key="business_ideas.id", index=True)
 
+    # 👇 NOUVEAU : snapshot figé de l'idée au moment de la conversion
+    idea_snapshot: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True)
+    )
+
 class Deliverable(SQLModel, table=True):
     __tablename__ = "deliverables"
 
