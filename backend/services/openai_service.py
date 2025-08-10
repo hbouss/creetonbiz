@@ -62,7 +62,21 @@ def generate_business_idea(profil: dict) -> str:
         - "nom" : court, mémorisable.
         - "slogan" : bénéfice clair (6–10 mots).
         - Ton : crédible, énergisant, sans buzzwords vides.
-    """)
+        
+        RUBRIQUE DE NOTATION (interne — n’affiche pas ces sous-scores)
+    - Marché / tailwinds : 0–10
+    - Différenciation / barrière : 0–10
+    - Fit avec compétences / exécution : 0–10
+    - Clarté de la proposition : 0–10
+    Score final = 0.35*Marché + 0.30*Différenciation + 0.20*Fit + 0.15*Clarté (une décimale).
+
+    DISTRIBUTION ATTENDUE (évite l’ancrage)
+    - ≥ 8.5 : exceptionnel et RARE (<10%)
+    - 7.5–8.4 : ~25%
+    - 6.0–7.4 : ~40%
+    - ≤ 5.9 : ~25%
+    Utilise toute l’échelle et **n’utilise pas 8.2 par défaut** : choisis la valeur qui découle réellement du barème.
+""")
 
     user_msg = dedent(f"""\
         Profil utilisateur

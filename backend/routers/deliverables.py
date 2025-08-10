@@ -1,12 +1,16 @@
 # backend/routers/deliverables.py
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from typing import Optional
-from backend.dependencies import get_current_user
+from backend.dependencies import get_current_user, require_startnow
 from backend.db import get_session
 from backend.models import Deliverable
 from sqlmodel import select
 from fastapi.responses import FileResponse, JSONResponse
 from backend.services.pdf_service import make_pdf_from_deliverable
+from backend.services.deliverable_service import export_pdf_from_html
+import os
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -90,3 +94,37 @@ def download_deliverable_file(
         d.json_content or {},
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+@router.get("/{deliverable_id}/pdf")
+async def download_pdf(deliverable_id: int, user=Depends(require_startnow)):
+    with get_session() as s:
+        d = s.get(Deliverable, deliverable_id)
+        if not d or d.user_id != user.id:
+            raise HTTPException(404, "Livrable introuvable")
+
+        j = d.json_content or {}
+
+        # 1) Nouveau flux pour MARKETING : servir le PDF Playwright
+        if d.kind == "marketing":
+            pdf_path = (j or {}).get("pdf_path")
+            if pdf_path and os.path.exists(pdf_path):
+                return FileResponse(pdf_path, media_type="application/pdf",
+                                    filename=Path(pdf_path).name)
+
+            # Sinon on (re)génère à partir de l’HTML sauvegardé
+            if d.file_path and os.path.exists(d.file_path):
+                new_pdf = await export_pdf_from_html(d.file_path)
+                j["pdf_path"] = new_pdf
+                d.json_content = j
+                s.add(d); s.commit()
+                return FileResponse(new_pdf, media_type="application/pdf",
+                                    filename=Path(new_pdf).name)
+
+        # 2) Fallback générique : ReportLab
+        pdf_bytes = make_pdf_from_deliverable(d)
+        filename = f'{(d.title or d.kind).replace("/", "-")}.pdf'
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
