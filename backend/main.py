@@ -1,6 +1,9 @@
 # backend/main.py
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.staticfiles import StaticFiles
 
 # importe et initialise la BDD
 from backend.db import init_db
@@ -22,6 +25,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+STORAGE_ROOT = Path(__file__).resolve().parent / "storage"  # ou importe STORAGE_DIR
+app.mount("/public", StaticFiles(directory=STORAGE_ROOT), name="public")
 
 # Création des tables si elles n'existent pas
 init_db()

@@ -13,7 +13,14 @@ import {
   listIdeas,
   deleteIdea,
   deleteProject,
+  publishLanding,
+  openPlanICS
 } from '../api.js'
+import LandingHelp from "../components/LandingHelpRaw.jsx";
+import BusinessPlanHelp from "../components/BusinessPlanHelp.jsx"; // adapte le chemin
+import MarketingHelp from "../components/MarketingHelp.jsx";
+import BrandingHelp from "../components/BrandingHelp.jsx";
+import OfferHelp from "../components/OfferHelp.jsx";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 
@@ -26,7 +33,7 @@ export default function DashboardPage() {
   const [deliverablesMap, setDeliverablesMap] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
+  const [publishingProjectId, setPublishingProjectId] = useState(null)
   const [form, setForm] = useState({
     title: '',
     secteur: '',
@@ -209,6 +216,28 @@ export default function DashboardPage() {
       setLoading(false)
     }
   }
+
+  async function handlePublishLanding(projectId) {
+  try {
+    setPublishingProjectId(projectId)
+    const { url } = await publishLanding(projectId)
+    // petit confort: copie dans le presse-papier et alert
+    try { await navigator.clipboard.writeText(url) } catch {}
+    alert(`Landing en ligne:\n${url}\n(Lien copié dans le presse-papiers)`)
+    await fetchProjects() // pour faire apparaitre le deliverable "landing_public"
+  } catch (e) {
+    setError(e.message)
+  } finally {
+    setPublishingProjectId(null)
+  }
+}
+
+// ouvre le modal Business Plan via un CustomEvent
+const fireBpHelp = React.useCallback(
+  (kind = "pdf") =>
+    window.dispatchEvent(new CustomEvent("bp-help:open", { detail: { kind } })),
+  []
+);
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6 space-y-8">
@@ -448,37 +477,142 @@ export default function DashboardPage() {
                 </button>
               </div>
               <ul className="grid md:grid-cols-2 gap-3">
-                {(deliverablesMap[p.id] || []).map((d) => (
-                  <li key={d.id} className="bg-gray-600 p-3 rounded flex justify-between items-center">
-                    <span>
-                      <p className="font-medium">{d.title || d.kind}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(d.created_at).toLocaleString()}
-                      </p>
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => onDownload(d, 'pdf')}
-                        className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
-                      >
-                        PDF
-                      </button>
-                      {d.has_file && (
-                        <button
-                          onClick={() => onDownload(d, 'html')}
-                          className="px-2 py-1 bg-green-700 hover:bg-green-600 rounded text-white text-sm"
-                        >
-                          HTML
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+  {(deliverablesMap[p.id] || [])
+    .filter(d => d.kind !== 'landing_public') // on masque l’ancien doublon
+    .map((d) => {
+      const isLanding   = d.kind === 'landing'
+      const publicUrl   = d?.json_content?.public_url ?? null
+      const isPublished = Boolean(publicUrl)
+      const isPlan      = d.kind === 'plan' || /plan d'action/i.test(d.title || '')
+      const isBusinessPlan =
+        d.kind === "business_plan" ||            // si ton backend nomme ainsi
+        d.kind === "model" ||                    // (souvent votre BP est "model")
+        /business\s*plan/i.test(d.title || "");  // fallback robuste sur le titre
+      const isMarketing  = d.kind === 'marketing' || /marketing/i.test(d.title || '');
+      const isBrand = d.kind === 'brand' || d.kind === 'branding' || /brand|branding|identité|charte/i.test(d.title || '');
+      const isOffer = d.kind === 'offer' || /offre|offer/i.test(d.title || '');
+
+      return (
+        <li key={d.id} className="bg-gray-600 p-3 rounded flex justify-between items-center">
+          <span>
+            <p className="font-medium">{d.title || d.kind}</p>
+            <p className="text-xs text-gray-400">
+              {new Date(d.created_at).toLocaleString()}
+            </p>
+          </span>
+
+          {/* ✅ un seul conteneur, bien fermé */}
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={() => {
+                if (isBusinessPlan) fireBpHelp("pdf");   // <= ouvre le modal BP
+                if (isMarketing) {
+                  window.dispatchEvent(new CustomEvent('mkt-help:open', { detail: { kind: 'pdf' } }));
+                }
+                if (isBrand) {
+                  window.dispatchEvent(new CustomEvent('brand-help:open', { detail: { kind: 'pdf' } }));
+                }
+                if (isOffer) {
+                  window.dispatchEvent(new CustomEvent('offer-help:open', { detail: { kind: 'pdf' } }));
+                }
+                onDownload(d, "pdf");                     // puis lance le téléchargement
+              }}
+              className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
+            >
+              PDF
+            </button>
+
+            {d.has_file && (
+              <button
+                onClick={() => {
+                  onDownload(d, 'html');
+                  if (isLanding) {
+                    window.dispatchEvent(new CustomEvent('landing-help:open', {
+                      detail: { kind: 'html', deliverableId: d.id, projectId: p.id }
+                    }));
+                  }
+                  if (isBusinessPlan) fireBpHelp("html"); // <= ouvre le modal BP
+                  if (isMarketing) {
+                    window.dispatchEvent(new CustomEvent('mkt-help:open', { detail: { kind: 'html' } }));
+                  }
+                  if (isBrand) {
+                    window.dispatchEvent(new CustomEvent('brand-help:open', { detail: { kind: 'html' } }));
+                  }
+                  if (isOffer) {
+                    window.dispatchEvent(new CustomEvent('offer-help:open', { detail: { kind: 'html' } }));
+                  }
+                    onDownload(d, "html");                   // puis lance le téléchargement
+                  }}
+                className="px-2 py-1 bg-green-700 hover:bg-green-600 rounded text-white text-sm"
+              >
+                HTML
+              </button>
+            )}
+
+            {d.kind === 'plan' && (
+              <button
+                onClick={() => onDownload(d, 'ics')}
+                className="px-2 py-1 bg-amber-600 hover:bg-amber-500 rounded text-white text-sm"
+              >
+                Agenda (.ics)
+              </button>
+            )}
+
+            {isLanding && !isPublished && (
+              <button
+                disabled={!!publishingProjectId}
+                onClick={async () => {
+                  await handlePublishLanding(p.id);
+                  window.dispatchEvent(new CustomEvent('landing-help:open', {
+                    detail: { kind: 'publish', deliverableId: d.id, projectId: p.id }
+                  }));
+                }}
+                className={`px-2 py-1 rounded text-white text-sm ${
+                  publishingProjectId === p.id
+                    ? 'bg-gray-500 cursor-wait'
+                    : 'bg-teal-600 hover:bg-teal-500'
+                }`}
+                title="Publier via Nginx"
+              >
+                {publishingProjectId === p.id ? 'Publication…' : 'Mettre en ligne'}
+              </button>
+            )}
+
+            {isLanding && isPublished && (
+              <>
+                <a
+                  href={publicUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm"
+                >
+                  Ouvrir
+                </a>
+                <button
+                  onClick={async () => {
+                    try { await navigator.clipboard.writeText(publicUrl) } catch {}
+                  }}
+                  className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-white text-sm"
+                  title="Copier l’URL"
+                >
+                  Copier
+                </button>
+              </>
+            )}
+          </div>
+        </li>
+      )
+    })}
+</ul>
             </div>
           ))
         )}
       </section>
+      <LandingHelp />
+      <BusinessPlanHelp />
+      <MarketingHelp />
+      <BrandingHelp />
+      <OfferHelp />
     </div>
   )
 }

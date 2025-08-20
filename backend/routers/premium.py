@@ -1,21 +1,29 @@
 # backend/routers/premium.py
-from fastapi import APIRouter, Depends, HTTPException, Query
+import base64, mimetypes, os
+import time
+from datetime import datetime
+from pathlib import Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi.responses import FileResponse
+from sqlmodel import select
 from backend.schemas import (
     ProfilRequest, OfferResponse, BusinessModelResponse, BrandResponse,
     LandingResponse, MarketingResponse, PlanResponse
 )
+from backend.services.calendar_service import ics_from_events
 from backend.services.premium_service import (
     generate_offer, generate_brand,
     generate_landing, generate_marketing, generate_plan, check_domains_availability as check_domains_namecheap,
-    generate_acquisition_structured_for_marketing, generate_business_plan_structured,
+    generate_acquisition_structured_for_marketing, generate_business_plan_structured, _ics_from_events,
 )
-from backend.dependencies import require_startnow
+from backend.dependencies import require_startnow, get_current_user
 from backend.services.deliverable_service import (save_deliverable, write_landing_file, render_offer_report_html,
                                                   render_brand_report_html, render_acquisition_report_html,
-                                                  render_business_plan_html,
-                                                  export_pdf_from_html)
+                                                  render_business_plan_html, publish_landing_to_webroot,
+                                                  export_pdf_from_html, render_action_plan_html)
 from backend.db import get_session
-from backend.models import Project, User
+from backend.models import Project, User, Deliverable
+from backend.services.deliverable_service import STORAGE_DIR
 from backend.services.domain_service import suggest_domains, check_domains_availability as check_domains_domainr
 import json
 
@@ -45,6 +53,53 @@ def _get_project_and_unlock_if_needed(user_id: int, project_id: int) -> Project:
 
         # ⚠️ On renvoie toujours le projet, qu’il soit déjà débloqué ou non
         return proj
+
+def _data_uri_from_file(path: str | None) -> str | None:
+    if not path or not os.path.exists(path):
+        return None
+    mime, _ = mimetypes.guess_type(path)
+    mime = mime or "application/octet-stream"
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:{mime};base64,{b64}"
+
+def _extract_brand_for_project(project_id: int):
+    """
+    Retourne (brand_dict, logo_data_uri) à partir du dernier deliverable 'brand'.
+    Tente plusieurs clés possibles: logo_svg, logo_png, logo_files, logos, assets.
+    """
+    with get_session() as s:
+        d = (
+            s.query(Deliverable)
+            .filter(Deliverable.project_id == project_id, Deliverable.kind == "brand")
+            .order_by(Deliverable.id.desc())
+            .first()
+        )
+        if not d:
+            return {}, None
+        j = d.json_content or {}
+        # 1/ SVG inline
+        svg = j.get("logo_svg")
+        if isinstance(svg, str) and svg.strip().startswith("<svg"):
+            # encodage inline
+            payload = base64.b64encode(svg.encode("utf-8")).decode("utf-8")
+            return j, f"data:image/svg+xml;base64,{payload}"
+
+        # 2/ Fichiers
+        for key in ("logo_png", "logo_file", "logo", "logo_path"):
+            uri = _data_uri_from_file(j.get(key))
+            if uri:
+                return j, uri
+
+        # 3/ Listes
+        for key in ("logo_files", "logos", "assets"):
+            val = j.get(key)
+            if isinstance(val, list):
+                for candidate in val:
+                    uri = _data_uri_from_file(candidate)
+                    if uri:
+                        return j, uri
+        return j, None
 
 @router.post("/offer", response_model=OfferResponse)
 async def offer_endpoint(
@@ -193,14 +248,75 @@ async def landing_endpoint(
     user=Depends(require_startnow),
 ):
     proj = _get_project_and_unlock_if_needed(user.id, project_id)
-    data = await generate_landing(profil, idea_snapshot=proj.idea_snapshot)
-    html = data.html if hasattr(data, "html") else (data.get("html") if isinstance(data, dict) else "")
+
+    # Brand + logo (si existants)
+    brand, logo_data_uri = _extract_brand_for_project(project_id)
+
+    # Injecter project_id dans idea_snapshot (pour le champ hidden du form)
+    idea_snapshot = dict(proj.idea_snapshot or {})
+    idea_snapshot["project_id"] = project_id
+
+    data = await generate_landing(
+        profil,
+        idea_snapshot=idea_snapshot,
+        brand=brand,
+        logo_data_uri=logo_data_uri,
+    )
+
+    html = data.html
     fp = write_landing_file(user.id, html)
+
+    # URL publique: /public/... (voir section 3 pour le montage)
+    rel = os.path.relpath(fp, os.path.abspath(STORAGE_DIR))
+    public_url = f"/public/{rel}".replace("\\", "/")
+
     save_deliverable(
-        user.id, "landing", {"html_saved": True},
+        user.id, "landing", {"html_saved": True, "public_url": public_url},
         title="Landing HTML", file_path=fp, project_id=project_id
     )
+    # Facultatif: renvoyer l'URL si tu peux élargir le schéma. Sinon log/console.
+    # return {"html": html, "url": public_url}  # ⇐ si tu ajustes LandingResponse
     return data
+
+@router.post("/landing/publish")
+async def publish_landing_endpoint(
+    project_id: int = Query(..., gt=0),
+    user=Depends(get_current_user),
+):
+    """
+    Publie la DERNIÈRE landing générée de ce projet dans le webroot Nginx et
+    renvoie l’URL publique.
+    """
+    proj = _get_project_and_unlock_if_needed(user.id, project_id)
+
+    # Récupère la landing la plus récente
+    with get_session() as s:
+        q = select(Deliverable).where(
+            Deliverable.user_id == user.id,
+            Deliverable.project_id == project_id,
+            Deliverable.kind == "landing",
+        ).order_by(Deliverable.created_at.desc())
+        d = s.exec(q).first()
+
+    if not d or not d.file_path:
+        raise HTTPException(status_code=404, detail="Aucune landing HTML trouvée pour ce projet.")
+
+    try:
+        url = publish_landing_to_webroot(user.id, project_id, proj.title, d.file_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Publication échouée: {e}")
+
+        # ✅ Mettre à jour le livrable EXISTANT (pas de nouveau livrable)
+    with get_session() as s:
+            dd = s.get(Deliverable, d.id)
+            payload = dict(dd.json_content or {})
+            payload["public_url"] = url
+            payload["published_at"] = datetime.utcnow().isoformat()
+            dd.json_content = payload
+            s.add(dd)
+            s.commit()
+
+    return {"ok": True, "url": url}
 
 @router.post("/marketing", response_model=MarketingResponse)
 async def marketing_endpoint(
@@ -252,7 +368,33 @@ async def plan_endpoint(
     user=Depends(require_startnow),
 ):
     proj = _get_project_and_unlock_if_needed(user.id, project_id)
-    data = await generate_plan(profil, idea_snapshot=proj.idea_snapshot)
-    json_obj = data.model_dump() if hasattr(data, "model_dump") else data
-    save_deliverable(user.id, "plan", json_obj, title="Plan d'action 4 semaines", project_id=project_id)
+
+    # 1) Génération du plan (weeks + schedule)
+    data = await generate_plan(profil, idea_snapshot=proj.idea_snapshot, project_id=project_id)
+    plan_dict = data.model_dump() if hasattr(data, "model_dump") else dict(data)
+
+    # 2) Rendu HTML identique aux autres
+    html = render_action_plan_html(plan_dict, project_title=f"Plan d'action — {proj.title}")
+    fp_html = write_landing_file(user.id, html)  # ✅ comme “marketing”
+
+    # 3) PDF depuis l’HTML (identique visuellement)
+    pdf_path = await export_pdf_from_html(fp_html, format_="A4")
+
+    # 4) ICS depuis la schedule (util commun)
+    schedule_raw = plan_dict.get("schedule") or []
+    ics_str = ics_from_events(f"Plan d'action — {proj.title}", schedule_raw)
+
+    base = Path(STORAGE_DIR) / f"user_{user.id}" / f"project_{project_id}" / "plan"
+    base.mkdir(parents=True, exist_ok=True)
+    ics_fp = base / f"plan_{int(time.time())}.ics"
+    ics_fp.write_text(ics_str, encoding="utf-8")
+
+    # 5) Sauvegarde livrable complet (HTML principal + JSON + PDF + ICS)
+    payload = {**plan_dict, "pdf_path": pdf_path, "ics_path": str(ics_fp)}
+    save_deliverable(
+        user.id, "plan", payload,
+        title="Plan d'action 4 semaines",
+        file_path=fp_html,                 # 👈 bouton HTML (comme les autres)
+        project_id=project_id
+    )
     return data

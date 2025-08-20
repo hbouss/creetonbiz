@@ -6,8 +6,13 @@ from backend.models import Deliverable
 import html, re
 from typing import Any
 from pathlib import Path
+import shutil
+import unicodedata
 
 STORAGE_DIR = os.path.join(os.path.dirname(__file__), "..", "storage")
+# --- Publication "1 clic" ---
+PUBLIC_WEBROOT = os.path.expanduser("~/public_sites")  # dossier servi par Nginx
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://pages.localtest.me:8080")
 
 # Retire les caractères de contrôle interdits par Postgres (\x00 notamment)
 # On conserve \n, \r, \t pour ne pas casser les retours à la ligne.
@@ -66,6 +71,77 @@ def write_landing_file(user_id: int, html_str: str) -> str:
     with open(path, "w", encoding="utf-8") as f:
         f.write(safe_html)
     return path
+
+def _slugify(s: str) -> str:
+    s = (s or "").strip().lower()
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s or "page"
+def inject_logo_data_uri(html_str: str, data_uri: str, brand_name: str | None = None) -> str:
+    """
+    Injecte un <img src="data:..."> dans le header/hero ou juste après <body>.
+    - Si la landing contient un placeholder <div id="brand-logo-slot"></div>, on le remplace.
+    - Sinon: on essaie d'insérer dans <header>, puis fallback juste après <body>.
+    """
+    if not html_str or not data_uri:
+        return html_str
+
+    alt = _html.escape(brand_name or "Logo")
+    img = f'<img src="{data_uri}" alt="{alt}" style="height:48px;width:auto;display:block"/>'
+
+    # 1) Placeholder explicite
+    if '<div id="brand-logo-slot"></div>' in html_str:
+        return html_str.replace('<div id="brand-logo-slot"></div>', img, 1)
+
+    # 2) Insertion dans <header>
+    m = re.search(r'<header[^>]*>', html_str, flags=re.IGNORECASE)
+    if m:
+        i = m.end()
+        return html_str[:i] + img + html_str[i:]
+
+    # 3) Fallback: juste après <body>
+    m = re.search(r'<body[^>]*>', html_str, flags=re.IGNORECASE)
+    if m:
+        i = m.end()
+        block = f'<div class="brand-logo" style="padding:12px 0;display:flex;align-items:center">{img}</div>'
+        return html_str[:i] + block + html_str[i:]
+
+    # 4) Ultime fallback: au tout début
+    return img + html_str
+
+def publish_landing_to_webroot(
+    user_id: int,
+    project_id: int,
+    project_title: str,
+    html_path: str,
+) -> str:
+    """
+    Copie la landing générée (html_path) vers le webroot public Nginx :
+      ~/public_sites/u<user_id>/<slug>/index.html
+
+    Retourne l'URL publique.
+    """
+    if not html_path or not os.path.exists(html_path):
+        raise FileNotFoundError(f"Landing HTML introuvable: {html_path}")
+
+    slug = _slugify(project_title) + f"-{project_id}"
+    dest_dir = os.path.join(PUBLIC_WEBROOT, f"u{user_id}", slug)
+    os.makedirs(dest_dir, exist_ok=True)
+
+    # Option: minifier très léger (on garde simple, pas d’external lib)
+    with open(html_path, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    # S’assure qu’on a bien un charset (évite 'âœ…')
+    if "<meta charset" not in html.lower():
+        html = html.replace("<head>", "<head><meta charset=\"utf-8\">", 1)
+
+    dest_index = os.path.join(dest_dir, "index.html")
+    with open(dest_index, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    return f"{PUBLIC_BASE_URL}/u{user_id}/{slug}/"
 
 
 # ---------------------- OFFRE : rendu HTML (rapport) -------------------------
@@ -752,6 +828,53 @@ def _svg_funnel(label: str, counts: dict[str, float]) -> str:
         y += 30
     return f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="Funnel {html.escape(label)}"><text x="12" y="16" fill="#e5e7eb" font-size="14">Funnel — {html.escape(label)}</text>{"".join(rows)}</svg>'
 
+# ── Helper SVG ligne + axe Y pour le CA ──────────────────────────────────────
+def _svg_line_with_y_axis(title: str, labels: list[str], values: list[float], y_label: str = "CA prévisionnel (€)") -> str:
+    if not labels or not values:
+        return ""
+    import math, html as _html
+    w, h = 720, 320
+    pad_left, pad_right, pad_top, pad_bottom = 64, 24, 28, 44
+
+    n = len(values)
+    vmax = max(1.0, max(values))
+    # échelle "ronde"
+    step = max(1000, int(round(vmax / 5 / 1000.0)) * 1000)
+    ymax = int(math.ceil(vmax / step)) * step
+
+    xs = [pad_left + i * ((w - pad_left - pad_right) / max(1, n - 1)) for i in range(n)]
+    def y_of(v: float) -> float:
+        return h - pad_bottom - ((h - pad_top - pad_bottom) * (v / ymax))
+
+    pts = " ".join(f"{xs[i]:.1f},{y_of(values[i]):.1f}" for i in range(n))
+
+    # grilles + ticks Y
+    yticks = []
+    k = 0
+    while k <= ymax:
+        y = y_of(k)
+        yticks.append(
+            f'<line x1="{pad_left-6}" y1="{y:.1f}" x2="{w-pad_right}" y2="{y:.1f}" stroke="#1f2937" />'
+            f'<text x="{pad_left-10}" y="{y+4:.1f}" text-anchor="end" font-size="11" fill="#cbd5e1">{k:,}</text>'
+        )
+        k += step
+
+    # ticks X (mois)
+    xt = "".join(
+        f'<text x="{xs[i]:.1f}" y="{h-18}" text-anchor="middle" font-size="11" fill="#cbd5e1">{_html.escape(labels[i])}</text>'
+        for i in range(n)
+    )
+
+    return f'''
+<svg viewBox="0 0 {w} {h}" role="img" aria-label="{_html.escape(title)}">
+  <rect x="0" y="0" width="{w}" height="{h}" fill="none"/>
+  <text x="{pad_left}" y="{pad_top-8}" font-size="14" fill="#e5e7eb">{_html.escape(title)}</text>
+  <text x="{pad_left-40}" y="{pad_top}" font-size="12" fill="#cbd5e1" transform="rotate(-90 {pad_left-40},{pad_top})">{_html.escape(y_label)}</text>
+  {"".join(yticks)}
+  <polyline fill="none" stroke="#8b93ff" stroke-width="2.5" points="{pts}" />
+  {xt}
+</svg>'''.strip()
+
 def render_acquisition_report_html(acq: dict, project_title: str, idea_text: str | None = None) -> str:
     def esc(x): return html.escape(str(x or ""))
     obj = acq.get("objectives", {})
@@ -953,12 +1076,26 @@ def render_acquisition_report_html(acq: dict, project_title: str, idea_text: str
 </div>
 </body></html>"""
 
+def _get_legal_block(bp: dict) -> dict:
+    # accepte les deux emplacements: narrative.legal (nouveau) ou top-level legal (ancien)
+    legal = (bp.get("narrative") or {}).get("legal") or bp.get("legal") or {}
+    # normalisation + defaults « lisibles » pour éviter une section vide
+    return {
+        "form":       str(legal.get("form") or "SAS (à confirmer)"),
+        "rationale":  str(legal.get("rationale") or "Justification du choix (investisseurs, gouvernance, régime social)."),
+        "cap_table":  list(legal.get("cap_table") or ["Répartition initiale à préciser"]),
+        "governance": list(legal.get("governance") or ["Pacte d’associés (préemption, leaver…)", "Pouvoirs & organes"]),
+        "tax_social": list(legal.get("tax_social") or ["IS/TVA", "Régime social du dirigeant"]),
+    }
+
 def render_business_plan_html(bp: dict, project_title: str, idea_text: str | None = None) -> str:
     def esc(x):
         try:
-            return html.escape(str(x if x is not None else ""))
+            import html as _html
+            return _html.escape(str(x if x is not None else ""))
         except Exception:
             return str(x)
+
     styles = """
     <style>
       :root { color-scheme: dark; }
@@ -980,8 +1117,11 @@ def render_business_plan_html(bp: dict, project_title: str, idea_text: str | Non
       td { background:#0b1220; border:1px solid #1f2937; }
       .pagebreak { page-break-before: always; }
       ul { margin:8px 0 0 18px }
+      .toc a { color:#e5e7eb; text-decoration:none }
     </style>
     """
+
+
     meta = bp.get("meta", {})
     nar  = bp.get("narrative", {})
     ass  = bp.get("assumptions", {})
@@ -991,41 +1131,277 @@ def render_business_plan_html(bp: dict, project_title: str, idea_text: str | Non
     cash = bp.get("cash_12m", {})
     bre  = bp.get("breakeven", {})
     s36  = bp.get("series_36m", {})
+    glossary = bp.get("glossary", {})
+    annexes  = bp.get("annexes", {})
 
-    # Charts
-    rev_pairs = [(f"M{i}", s36.get("revenue",[0]*37)[i]) for i in range(1, 13)]
-    ebd_pairs = [(f"M{i}", s36.get("ebitda",[0]*37)[i]) for i in range(1, 13)]
-    chart_rev = _svg_line_chart_multi("CA mensuel (M1–M12)", {"Revenu": [v for _, v in rev_pairs]}, [lab for lab, _ in rev_pairs])
-    chart_ebd = _svg_line_chart_multi("EBITDA mensuel (M1–M12)", {"EBITDA": [v for _, v in ebd_pairs]}, [lab for lab, _ in ebd_pairs])
+    # --- HOTFIX: normalise les blobs narratifs pour éviter AttributeError quand GPT renvoie une string ---
+    # Sécurise nar au cas où ce serait une simple chaîne
+    if not isinstance(nar, dict):
+        nar = {"executive_summary": str(nar or "")}
 
-    # Investments rows
+    def _as_list(x):
+        if isinstance(x, list):
+            return x
+        if isinstance(x, str) and x.strip():
+            return [x.strip()]
+        return []
+
+    market = nar.get("market") or {}
+    if not isinstance(market, dict):
+        market = {
+            "size_drivers": str(market or ""),
+            "segments": [],
+            "competition": [],
+            "regulation": [],
+        }
+
+    gtm = nar.get("go_to_market") or {}
+    if not isinstance(gtm, dict):
+        gtm = {
+            "segmentation": [],
+            "positioning": str(gtm or ""),
+            "mix": [],
+            "sales_process": [],
+        }
+
+    ops = nar.get("operations") or {}
+    if not isinstance(ops, dict):
+        ops = {
+            "organization": str(ops or ""),
+            "people": [],
+            "resources": [],
+            "roadmap": [],
+        }
+
+    # Funding & risks (obj/list robustes)
+    fund = nar.get("funding") or {}
+    if not isinstance(fund, dict):
+        fund = {"ask": str(fund or ""), "use_of_funds": [], "milestones": []}
+    risks = nar.get("risks") or []
+    if isinstance(risks, str):
+        risks = [risks]
+
+    proj_detail = nar.get("project_detail")
+    proj_text = None
+    if isinstance(proj_detail, dict):
+        pass
+    else:
+        proj_detail = None
+        proj_text = str(nar.get("project") or "")
+
+    # si tu as déplacé 'legal' et 'glossary' dans bp["legal"]/bp["glossary"], on les récupère prudemment
+    legal = bp.get("legal") or nar.get("legal") or {}
+    if not isinstance(legal, dict):
+        legal = {
+            "form": str(legal or ""),
+            "rationale": "",
+            "cap_table": [],
+            "governance": [],
+            "tax_social": [],
+        }
+
+    glossary = bp.get("glossary") or nar.get("glossary") or {}
+    if not isinstance(glossary, dict):
+        glossary = {}
+    # --- /HOTFIX ---
+
+    legal_block = _get_legal_block(bp)
+
+    # ▼▼▼ Fallbacks sectoriels pour éviter les "—" quand GPT renvoie des listes vides
+    sector_cat = (meta.get("sector_category") or "").lower()
+
+    def _pick(cat, key):
+        defaults = {
+            "saas_b2b": {
+                "segments": [
+                    "PME françaises (10–200 salariés) — décideurs: DG/COO/Head of Ops",
+                    "ETI ciblées — directions métiers avec budget outillage"
+                ],
+                "competition": [
+                    "SaaS US établis (HubSpot, Monday…) — riche mais coûteux",
+                    "Outils internes (Excel/scripts) — faible scalabilité",
+                    "Intégrateurs locaux — sur-mesure onéreux"
+                ],
+                "regulation": [
+                    "RGPD/CNIL (DPA, registre traitements, minimisation)",
+                    "Hébergement UE, chiffrement au repos/en transit",
+                    "Clauses contractuelles: SLA, DPA, réversibilité"
+                ],
+                "mix": [
+                    "Produit: plans Starter/Pro/Entreprise, SSO & SLA",
+                    "Prix: abonnement mensuel/annuel, remises 10–20% à l’année",
+                    "Distribution: site + démos, partenaires intégrateurs",
+                    "Communication: SEO technique + contenu, SEA B2B, webinars, LinkedIn"
+                ],
+                "sales_process": [
+                    "Lead → qualification (BANT/ICP) → démo → essai 14j → closing → onboarding",
+                    "KPI: CAC, taux de conv., cycle de vente, churn, LTV"
+                ],
+                "people": [
+                    "CEO/COO (direction & partenariats)",
+                    "Sales (SDR + AE) — chasse/farming",
+                    "Marketing (content/paid/ops)",
+                    "Customer Success & Support",
+                    "Tech/Produit (selon externalisation)"
+                ],
+                "resources": [
+                    "CRM (HubSpot/Pipedrive), facturation (Stripe)",
+                    "Analytics (Matomo/GA4), emailing (Brevo)",
+                    "Stack cloud (Scaleway/OVH), monitoring",
+                    "Outils doc & projet (Notion/Jira)"
+                ],
+            },
+            "ecommerce_b2c": {
+                "segments": [
+                    "18–35 ans urbains — achats en ligne, sensibles au prix",
+                    "35–55 ans CSP+ — recherche qualité/rapidité/livraison"
+                ],
+                "competition": [
+                    "Marketplaces (Amazon, Cdiscount) — choix/rapidité",
+                    "Boutiques spécialisées — conseil de niche",
+                    "DNVB concurrentes — image de marque forte"
+                ],
+                "regulation": [
+                    "Droit conso (rétractation, garanties), TVA",
+                    "RGPD (cookies, consentement)",
+                    "Éco-contributions (emballages) selon produit"
+                ],
+                "mix": [
+                    "Produit: gammes claires, bundles, éditions limitées",
+                    "Prix: ancrage, codes promo maîtrisés, AOV",
+                    "Distribution: site + marketplaces sélectionnées",
+                    "Communication: SEO long tail, ads Meta/Google, influence"
+                ],
+                "sales_process": [
+                    "Acquisition → ajout panier → checkout → relance abandons → fidélisation",
+                    "KPI: CTR, CR, AOV, CAC, ROAS, réachat"
+                ],
+                "people": [
+                    "CMO/e-commerce manager",
+                    "Acquisition paid + CRM/e-mailing",
+                    "Service client & logistique (3PL si besoin)"
+                ],
+                "resources": [
+                    "CMS (Shopify/Woo), paiement (Stripe), anti-fraude",
+                    "WMS/3PL, PIM si catalogue large",
+                    "Outils CRO (A/B test), heatmaps"
+                ],
+            },
+            "services_locaux": {
+                "segments": [
+                    "Particuliers zone de chalandise (rayon 20 km)",
+                    "Professionnels locaux (restauration, commerces, TPE)"
+                ],
+                "competition": [
+                    "Artisans locaux historiques",
+                    "Plateformes d’intermédiation",
+                    "Do-it-yourself selon service"
+                ],
+                "regulation": [
+                    "Réglementations métier & assurances pro",
+                    "Devis/facturation, TVA",
+                    "Hygiène/sécurité le cas échéant"
+                ],
+                "mix": [
+                    "Produit: forfaits clairs + options",
+                    "Prix: grille transparente, pack récurrence",
+                    "Distribution: référencement local, partenariats",
+                    "Communication: Google Business, flyers, réseaux sociaux"
+                ],
+                "sales_process": [
+                    "Demande → devis → intervention → satisfaction → récurrence/parrainage",
+                    "KPI: taux d’acceptation devis, récurrence, NPS"
+                ],
+                "people": [
+                    "Gérant(e), 1–2 techniciens/ouvriers selon charge",
+                    "Assist. admin/commerciale (part-time)"
+                ],
+                "resources": [
+                    "Véhicule/outil métier",
+                    "Logiciel devis/facturation, agenda, CRM simple"
+                ],
+            },
+        }
+        # générique par défaut
+        defaults["generic_b2b"] = defaults["saas_b2b"]
+        return defaults.get(cat or "generic_b2b", {}).get(key, [])
+
+    # Remplissage des trous
+    market["segments"]    = market.get("segments")    or _pick(sector_cat, "segments")
+    market["competition"] = market.get("competition") or _pick(sector_cat, "competition")
+    market["regulation"]  = market.get("regulation")  or _pick(sector_cat, "regulation")
+
+    strat = gtm  # alias déjà utilisé plus bas
+    strat["mix"]           = strat.get("mix")           or _pick(sector_cat, "mix")
+    strat["sales_process"] = strat.get("sales_process") or _pick(sector_cat, "sales_process")
+    if not strat.get("positioning"):
+        strat["positioning"] = "Promesse claire (valeur + preuve), différenciation par expérience & ROI."
+
+    ops["people"]    = ops.get("people")    or _pick(sector_cat, "people")
+    ops["resources"] = ops.get("resources") or _pick(sector_cat, "resources")
+    # ▲▲▲ fin des fallbacks
+
+    # Graphiques (CA avec axe Y demandé)
+    rev_labels = [f"M{i}" for i in range(1, 13)]
+    rev_values = [ (s36.get("revenue") or [0]*37)[i] for i in range(1,13) ]
+    chart_rev  = _svg_line_with_y_axis("CA mensuel prévisionnel (M1–M12)", rev_labels, rev_values, y_label="CA prévisionnel (€)")
+
+    # EBITDA : tu peux conserver ton helper multi-lignes existant si tu l'as,
+    # sinon commente la ligne suivante.
+    try:
+        ebd_values = [ (s36.get("ebitda") or [0]*37)[i] for i in range(1,13) ]
+        chart_ebd  = _svg_line_chart_multi("EBITDA mensuel (M1–M12)", {"EBITDA": ebd_values}, rev_labels)
+    except Exception:
+        chart_ebd = ""
+
+    # Tableaux
     inv_rows = "".join(
         f"<tr><td>{esc(x['label'])}</td><td>{x['month']}</td><td>{x['life_years']} ans</td><td>{round(x['amount'],2)} €</td><td>{round(x['amort_month'],2)} €/mois</td></tr>"
         for x in inv.get("items", [])
     )
+    pnl_row = lambda key: "".join(f"<td>{round(v,2)} €</td>" for v in pnl.get(key, [0,0,0]))
 
-    pnl_rows = lambda key: "".join(f"<td>{round(v,2)} €</td>" for v in pnl.get(key, [0,0,0]))
-
-    # Loan schedule (premiers 12 mois)
     loan_sched = fin.get("loan", {}).get("schedule") or []
     loan_rows = "".join(
         f"<tr><td>M{it['month']}</td><td>{it['payment']} €</td><td>{it['interest']} €</td><td>{it['principal']} €</td><td>{it['balance']} €</td></tr>"
         for it in loan_sched[:12]
     )
 
+    # Sommaire avec Juridique + Glossaire (glossaire avant annexes)
     toc = """
-      <div class="card">
-        <h2>Sommaire</h2>
-        <ul class="toc">
-          <li><a href="#exec">1. Executive summary</a></li>
-          <li><a href="#team">2. Équipe fondatrice</a></li>
-          <li><a href="#project">3. Présentation du projet</a></li>
-          <li><a href="#eco">4. Partie économique</a></li>
-          <li><a href="#fin">5. Partie financière</a></li>
-          <li><a href="#annex">6. Annexes</a></li>
-        </ul>
-      </div>
-    """
+          <div class="card">
+            <h2>Sommaire</h2>
+            <ul class="toc">
+              <li><a href="#exec">1. Executive summary</a></li>
+              <li><a href="#team">2. Équipe fondatrice</a></li>
+              <li><a href="#project">3. Présentation du projet</a></li>
+              <li><a href="#eco">4. Partie économique</a></li>
+              <li><a href="#fin">5. Partie financière</a></li>
+              <li><a href="#funding">6. Besoin de financement</a></li>
+              <li><a href="#risks">7. Risques & parades</a></li>
+              <li><a href="#legal">8. Partie juridique</a></li>
+              <li><a href="#gloss">9. Glossaire</a></li>
+              <li><a href="#annex">10. Annexes</a></li>
+            </ul>
+          </div>
+        """
+
+
+    def ul(items):
+        if not items: return "<p class='muted'>—</p>"
+        if isinstance(items, dict):
+            return "<ul>" + "".join(f"<li><strong>{esc(k)}:</strong> {esc(v)}</li>" for k,v in items.items()) + "</ul>"
+        if isinstance(items, str):
+            items = [items]
+        return "<ul>" + "".join(f"<li>{esc(x)}</li>" for x in items) + "</ul>"
+
+    def dl(dct):
+        if not isinstance(dct, dict) or not dct: return "<p class='muted'>—</p>"
+        return "<ul>" + "".join(f"<li><strong>{esc(k)}</strong> — {esc(v)}</li>" for k,v in dct.items()) + "</ul>"
+
+    bre_rev = bre.get("revenue") or bre.get("revenue_annual_needed")
+    bre_hint = bre.get("month_hint") or (f"vers M{bre['month']}" if bre.get("month") else "non atteint sur 36 mois")
+    bre_m_ca = bre.get("revenue_month")
 
     return f"""<!doctype html>
 <html lang="fr"><head>
@@ -1053,8 +1429,8 @@ def render_business_plan_html(bp: dict, project_title: str, idea_text: str | Non
     <p>{esc(nar.get("executive_summary"))}</p>
     <div class="grid grid-3" style="margin-top:8px">
       <div class="kpi">Secteur: {esc(meta.get("sector"))} ({esc(meta.get("sector_category"))})</div>
-      <div class="kpi">Objectif: {esc(meta.get("objective"))}</div>
-      <div class="kpi">Persona: {esc(meta.get("persona"))}</div>
+      <div class="kpi">Objectifs 24 mois: {esc(", ".join((nar.get("objectives") or [])))}</div>
+      <div class="kpi">Proposition de valeur: {esc((nar.get("value_prop") or ""))}</div>
     </div>
   </div>
 
@@ -1065,44 +1441,42 @@ def render_business_plan_html(bp: dict, project_title: str, idea_text: str | Non
 
   <div class="card" id="project">
     <h2>3. Présentation du projet</h2>
-    <p>{esc(nar.get("project"))}</p>
+    {(
+      f"<h3>Problème & opportunité</h3><p>{esc((proj_detail or {}).get('problem',''))}</p>"
+      f"<h3>Solution & différenciation</h3><p>{esc((proj_detail or {}).get('solution',''))}</p>"
+      f"<h3>Clients cibles</h3>" + ul((proj_detail or {}).get('targets')) +
+      f"<h3>Fonctionnalités clés</h3>" + ul((proj_detail or {}).get('product_features')) +
+      f"<h3>Proposition de valeur</h3><p>{esc((proj_detail or {}).get('value_prop',''))}</p>" +
+      f"<h3>Jalons</h3>" + ul((proj_detail or {}).get('milestones'))
+    ) if proj_detail else f"<p>{esc(proj_text or '')}</p>"}
   </div>
 
   <div class="pagebreak"></div>
 
   <div class="card" id="eco">
     <h2>4. Partie économique</h2>
-    <h3>Marché & environnement</h3>
-    <p>{esc(nar.get("market"))}</p>
+
+    <h3>Marché & environnement (France)</h3>
+    <p><strong>Taille & moteurs de croissance :</strong> {esc(market.get("size_drivers",""))}</p>
+    <p><strong>Segments de clientèle :</strong></p>{ul(market.get("segments"))}
+    <p><strong>Concurrence & alternatives :</strong></p>{ul(market.get("competition"))}
+    <p><strong>Réglementation / normes :</strong></p>{ul(market.get("regulation"))}
 
     <h3>Stratégie commerciale</h3>
-    <p>{esc(nar.get("go_to_market"))}</p>
+    <p><strong>Segmentation & ciblage :</strong></p>{ul(gtm.get("segmentation"))}
+    <p><strong>Positionnement :</strong> {esc(gtm.get("positioning",""))}</p>
+    <p><strong>Mix marketing :</strong></p>{ul(gtm.get("mix"))}
+    <p><strong>Processus de vente :</strong></p>{ul(gtm.get("sales_process"))}
 
     <h3>Organisation & moyens</h3>
-    <p>{esc(nar.get("operations"))}</p>
+    <p><strong>Organisation :</strong> {esc(ops.get("organization",""))}</p>
+    <p><strong>Moyens humains :</strong></p>{ul(ops.get("people"))}
+    <p><strong>Moyens matériels & logiciels :</strong></p>{ul(ops.get("resources"))}
+    <p><strong>Feuille de route :</strong></p>{ul(ops.get("roadmap"))}
 
-    <div class="grid grid-2" style="margin-top:10px">
-      <div class="kpi"><strong>Paramètres économiques</strong>
-        <ul>
-          <li>Prix moyen: {ass.get("price")} €</li>
-          <li>Croissance mensuelle: {int(ass.get("mom_growth",0)*100)} %</li>
-          <li>Marge brute: {int(ass.get("gm",0)*100)} %</li>
-          <li>Marketing: {int(ass.get("mkt_ratio",0)*100)} % du CA</li>
-          <li>OPEX fixes / mois: {ass.get("opex")} €</li>
-          <li>Charges de personnel / mois: {ass.get("payroll")} €</li>
-        </ul>
-      </div>
-      <div class="kpi"><strong>Indicateurs clés</strong>
-        <ul>
-          <li>Seuil de rentabilité: {bre.get("revenue","—")} € / an</li>
-          <li>Dette initiale: {fin.get("initial_sources",{}).get("loan","0")} €</li>
-          <li>Fonds propres: {fin.get("initial_sources",{}).get("equity","0")} €</li>
-        </ul>
-      </div>
-    </div>
-
+    <h3>Prévisions de CA (12 mois)</h3>
     <div style="margin-top:10px">{chart_rev}</div>
-    <div style="margin-top:10px">{chart_ebd}</div>
+    {f'<div style="margin-top:10px">{chart_ebd}</div>' if chart_ebd else ''}
   </div>
 
   <div class="pagebreak"></div>
@@ -1138,18 +1512,18 @@ def render_business_plan_html(bp: dict, project_title: str, idea_text: str | Non
     <table>
       <thead><tr><th></th><th>Année 1</th><th>Année 2</th><th>Année 3</th></tr></thead>
       <tbody>
-        <tr><td>Chiffre d'affaires</td>{pnl_rows('revenue')}</tr>
-        <tr><td>Coût des ventes</td>{pnl_rows('cogs')}</tr>
-        <tr><td>Marge brute</td>{pnl_rows('gross')}</tr>
-        <tr><td>Marketing</td>{pnl_rows('marketing')}</tr>
-        <tr><td>Charges fixes</td>{pnl_rows('fixed')}</tr>
-        <tr><td>EBITDA</td>{pnl_rows('ebitda')}</tr>
-        <tr><td>Amortissements</td>{pnl_rows('depreciation')}</tr>
-        <tr><td>EBIT</td>{pnl_rows('ebit')}</tr>
-        <tr><td>Intérêts</td>{pnl_rows('interest')}</tr>
-        <tr><td>Résultat avant impôt</td>{pnl_rows('ebt')}</tr>
-        <tr><td>IS (théorique)</td>{pnl_rows('tax')}</tr>
-        <tr><td>Résultat net</td>{pnl_rows('net')}</tr>
+        <tr><td>Chiffre d'affaires</td>{pnl_row('revenue')}</tr>
+        <tr><td>Coût des ventes</td>{pnl_row('cogs')}</tr>
+        <tr><td>Marge brute</td>{pnl_row('gross')}</tr>
+        <tr><td>Marketing</td>{pnl_row('marketing')}</tr>
+        <tr><td>Charges fixes</td>{pnl_row('fixed')}</tr>
+        <tr><td>EBITDA</td>{pnl_row('ebitda')}</tr>
+        <tr><td>Amortissements</td>{pnl_row('depreciation')}</tr>
+        <tr><td>EBIT</td>{pnl_row('ebit')}</tr>
+        <tr><td>Intérêts</td>{pnl_row('interest')}</tr>
+        <tr><td>Résultat avant impôt</td>{pnl_row('ebt')}</tr>
+        <tr><td>IS (théorique)</td>{pnl_row('tax')}</tr>
+        <tr><td>Résultat net</td>{pnl_row('net')}</tr>
       </tbody>
     </table>
 
@@ -1176,18 +1550,153 @@ def render_business_plan_html(bp: dict, project_title: str, idea_text: str | Non
       <div class="kpi">Dette fin A3: {round(fin.get('three_year_view',{}).get('loan_outstanding_end_y3',0),2)} €</div>
     </div>
 
-    <h3>Seuil de rentabilité</h3>
-    <p>CA annuel à atteindre: <strong>{bre.get("revenue","—")} €</strong> — indication: {esc(bre.get("month_hint","—"))}.</p>
+   <h3>Seuil de rentabilité</h3>
+<p>
+  CA annuel à atteindre : <strong>{bre_rev or "—"} €</strong> — indication : {esc(bre_hint)}
+  {f"(mois charnière: M{bre.get('month')}, CA: {bre_m_ca} €)" if bre.get("month") else ""}.
+</p>
   </div>
 
   <div class="pagebreak"></div>
+  
+  <div class="card" id="funding">
+  <h2>6. Besoin de financement</h2>
+  <p><strong>Demande (copy) :</strong> {esc(fund.get("ask",""))}</p>
+  <p class="muted">Recommandation (runway + BFR) : <strong>{round((fund.get("recommended_ask_eur") or 0),2)} €</strong></p>
+
+  <h3>Plan initial — Sources</h3>
+  <ul>
+    <li>Fonds propres : {((fund.get("initial_plan") or {}).get("sources") or {}).get("equity","—")} €</li>
+    <li>Emprunt : {((fund.get("initial_plan") or {}).get("sources") or {}).get("loan","—")} €</li>
+    <li><strong>Total</strong> : {((fund.get("initial_plan") or {}).get("sources") or {}).get("total","—")} €</li>
+  </ul>
+
+  <h3>Plan initial — Besoins</h3>
+  <ul>
+    <li>Investissements : {((fund.get("initial_plan") or {}).get("uses") or {}).get("investments","—")} €</li>
+    <li>BFR : {((fund.get("initial_plan") or {}).get("uses") or {}).get("working_capital","—")} €</li>
+    <li><strong>Total</strong> : {((fund.get("initial_plan") or {}).get("uses") or {}).get("total","—")} €</li>
+  </ul>
+
+  <h3>Utilisation des fonds</h3>{ul(fund.get("use_of_funds"))}
+  <h3>Jalons associés</h3>{ul(fund.get("milestones"))}
+</div>
+
+  <div class="card" id="risks">
+    <h2>7. Principaux risques & parades</h2>
+    {ul(risks)}
+  </div>
+
+  <div class="card" id="legal">
+  <h2>8. Partie juridique</h2>
+  <p><strong>Forme retenue :</strong> {esc(legal_block['form'])}</p>
+  <p><strong>Justification :</strong> {esc(legal_block['rationale'])}</p>
+  <h3>Répartition du capital (cap table)</h3>{ul(legal_block['cap_table'])}
+  <h3>Gouvernance & pouvoirs</h3>{ul(legal_block['governance'])}
+  <h3>Régime fiscal & social</h3>{ul(legal_block['tax_social'])}
+</div>
+
+  <div class="card" id="gloss">
+    <h2>9. Glossaire</h2>
+    {dl(glossary)}
+  </div>
+
   <div class="card" id="annex">
-    <h2>6. Annexes</h2>
-    <p class="muted">Ajouter: étude de marché détaillée, CV associés, contrats clés, hypothèses de conversion, etc.</p>
+    <h2>10. Annexes</h2>
+    {"".join(
+      f'<div class="kpi" style="margin-bottom:8px"><h3>{esc(k)}</h3><div style="white-space:pre-wrap">{esc(v)}</div></div>'
+      for k, v in (annexes or {}).items()
+    ) or '<p class="muted">—</p>'}
   </div>
 
 </div>
 </body></html>"""
+
+
+# --- PLAN HTML RENDERER ------------------------------------------------------
+def render_action_plan_html(plan: dict, project_title: str) -> str:
+    import html as _html
+    def esc(x): return _html.escape(str(x or ""))
+
+    weeks = plan.get("weeks")
+    if not isinstance(weeks, list) or not weeks:
+        weeks = []
+        for i, line in enumerate(plan.get("plan") or [], start=1):
+            weeks.append({"week": i, "theme": "", "goals": [], "kpis": [], "tasks": [{"title": str(line)}]})
+
+    styles = """
+    <style>
+      :root { color-scheme: dark; }
+      body { margin:0; background:#0f172a; color:#e5e7eb; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      .wrap { max-width:1000px; margin:0 auto; padding:24px; }
+      .card { background:#111827; border:1px solid #1f2937; border-radius:14px; padding:18px; margin-bottom:14px; }
+      h1 { font-size:26px; margin:0 0 10px; font-weight:800 }
+      h2 { font-size:18px; margin:14px 0 8px; color:#8b93ff }
+      h3 { font-size:16px; margin:10px 0 6px; }
+      ul { margin:8px 0 0 18px }
+      .badge { display:inline-block; background:#0b1220; border:1px solid #1f2937; padding:6px 10px; border-radius:999px; font-size:12px; color:#cbd5e1 }
+    </style>
+    """
+
+    def _as_list(x):
+        if isinstance(x, list): return x
+        if x is None: return []
+        return [x]
+
+    def _task_li(t):
+        if isinstance(t, str):  # compat
+            return esc(t)
+        d = t if isinstance(t, dict) else getattr(t, "dict")() if hasattr(t, "dict") else {}
+        title = d.get("title")
+        owner = d.get("owner")
+        est   = d.get("estimate_h")
+        due   = d.get("due_offset_days")
+        desc  = d.get("desc")
+        parts = [title or ""]
+        if owner: parts.append(f"— {owner}")
+        meta = []
+        if est: meta.append(f"{est} h")
+        if due is not None: meta.append(f"J+{due}")
+        if meta: parts.append(f"({' • '.join(str(m) for m in meta)})")
+        if desc: parts.append(f" — {desc}")
+        return esc(" ".join(str(p) for p in parts if p))
+
+    def ul(items, is_tasks=False):
+        items = _as_list(items)
+        if not items: return "<p class='badge'>—</p>"
+        if is_tasks:
+            return "<ul>" + "".join(f"<li>{_task_li(x)}</li>" for x in items) + "</ul>"
+        return "<ul>" + "".join(f"<li>{esc(x)}</li>" for x in items) + "</ul>"
+
+    blocks = []
+    for w in weeks:
+        d = w if isinstance(w, dict) else (w.dict() if hasattr(w, "dict") else {})
+        title = d.get("title")
+        if not title:
+            wk = d.get("week")
+            th = d.get("theme") or ""
+            title = f"Semaine {wk}{': ' + th if th else ''}"
+        blocks.append(f"""
+          <div class="card">
+            <h2>{esc(title)}</h2>
+            <h3>Objectifs</h3>{ul(d.get('goals'))}
+            <h3>Tâches</h3>{ul(d.get('tasks'), is_tasks=True)}
+            <h3>KPIs</h3>{ul(d.get('kpis'))}
+          </div>
+        """)
+
+    return f"""<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>{esc(project_title)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+{styles}
+</head><body><div class="wrap">
+  <div class="card"><h1>{esc(project_title)}</h1>
+    <p class="badge">Plan d'action (export HTML · PDF · Agenda)</p>
+  </div>
+  {''.join(blocks)}
+</div></body></html>"""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Export PDF identique au HTML via Chromium headless (Playwright)

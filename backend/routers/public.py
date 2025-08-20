@@ -1,5 +1,8 @@
 # backend/routers/public.py
-from fastapi import APIRouter, HTTPException, Depends, status
+import public
+from fastapi import APIRouter, HTTPException, Depends, status, Form
+from pydantic import EmailStr
+from fastapi.responses import JSONResponse
 from sqlmodel import select
 import json
 import logging
@@ -102,3 +105,32 @@ def delete_idea(idea_id: int, user=Depends(get_current_user)):
         session.delete(idea)
         session.commit()
     return
+
+@router.post("/landing/lead")
+async def landing_lead(
+    project_id: int = Form(...),
+    name: str = Form(...),
+    email: EmailStr = Form(...),
+    message: str = Form(""),
+):
+    # Stockage minimaliste en CSV
+    from datetime import datetime
+    from pathlib import Path
+    from backend.services.deliverable_service import STORAGE_DIR
+
+    leads_dir = Path(STORAGE_DIR) / "leads"
+    leads_dir.mkdir(parents=True, exist_ok=True)
+    fp = leads_dir / f"project_{project_id}.csv"
+
+    # Nettoyage simple pour le CSV
+    name_s = (name or "").replace('"', "'")
+    msg_s  = (message or "").replace('"', "'")
+
+    if not fp.exists():
+        fp.write_text("created_at,project_id,name,email,message\n", encoding="utf-8")
+
+    line = f'"{datetime.utcnow().isoformat()}","{project_id}","{name_s}","{email}","{msg_s}"\n'
+    with fp.open("a", encoding="utf-8") as f:
+        f.write(line)
+
+    return JSONResponse({"ok": True})

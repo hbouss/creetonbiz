@@ -256,3 +256,16 @@ export const listIdeas = () =>
 
 // SUPPRESSION
 export const deleteIdea = (id) => request(`/api/me/ideas/${id}`, { method: "DELETE" });
+
+// …
+export const publishLanding = (projectId) =>
+  request(`/api/premium/landing/publish?project_id=${projectId}`, {
+    method: 'POST',
+  });
+
+// Forcer le navigateur à télécharger le .ics
+export function openPlanICS(projectId) {
+  const url = `/api/premium/plan/ics?project_id=${projectId}`;
+  // Ouvre dans le même onglet -> déclenche le téléchargement
+  window.location.href = url;
+}

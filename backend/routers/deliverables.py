@@ -10,6 +10,7 @@ from sqlmodel import select
 from fastapi.responses import FileResponse, JSONResponse
 from backend.services.pdf_service import make_pdf_from_deliverable
 from backend.services.deliverable_service import export_pdf_from_html
+from backend.services.calendar_service import ics_from_events
 import os
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -69,6 +70,31 @@ def download_deliverable_file(
         if not d or d.user_id != user.id:
             raise HTTPException(404, "Livrable introuvable")
 
+        # 🔹 ICS pour le plan d'action (même endpoint que les autres)
+        if format == "ics":
+            j = d.json_content or {}
+            ics_path = (j or {}).get("ics_path")
+            # 1) Si un fichier ICS existe, on le renvoie tel quel
+            if ics_path and os.path.exists(ics_path):
+                return FileResponse(
+                    ics_path,
+                    filename=f"{(d.title or d.kind).replace(' ', '_')}.ics",
+                    media_type="text/calendar; charset=utf-8"
+                )
+            # 2) Sinon, on (re)génère à la volée depuis la schedule
+            if d.kind != "plan":
+                raise HTTPException(400, "Export ICS disponible uniquement pour le plan d'action.")
+            events = (j or {}).get("schedule") or []
+            if not events:
+                raise HTTPException(404, "Aucun évènement calendrier dans ce plan.")
+            ics_str = ics_from_events(d.title or d.kind, events)
+            filename = f"{(d.title or d.kind).replace(' ', '_')}.ics"
+            return Response(
+                content=ics_str,
+                media_type="text/calendar; charset=utf-8",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            )
+
     # 1) Cas fichier existant (landing HTML)
     if d.file_path and (format in ("auto", "file", "html")):
         filename = d.title or f"{d.kind}-{d.id}.html"
@@ -104,14 +130,13 @@ async def download_pdf(deliverable_id: int, user=Depends(require_startnow)):
 
         j = d.json_content or {}
 
-        # 1) Nouveau flux pour MARKETING : servir le PDF Playwright
-        if d.kind == "marketing":
+        # 1) Même flux pour MARKETING **et PLAN** : PDF Playwright depuis l’HTML
+        if d.kind in ("marketing", "plan"):
             pdf_path = (j or {}).get("pdf_path")
             if pdf_path and os.path.exists(pdf_path):
                 return FileResponse(pdf_path, media_type="application/pdf",
                                     filename=Path(pdf_path).name)
 
-            # Sinon on (re)génère à partir de l’HTML sauvegardé
             if d.file_path and os.path.exists(d.file_path):
                 new_pdf = await export_pdf_from_html(d.file_path)
                 j["pdf_path"] = new_pdf
@@ -120,7 +145,7 @@ async def download_pdf(deliverable_id: int, user=Depends(require_startnow)):
                 return FileResponse(new_pdf, media_type="application/pdf",
                                     filename=Path(new_pdf).name)
 
-        # 2) Fallback générique : ReportLab
+        # 2) Fallback générique ReportLab (si jamais pas d’HTML)
         pdf_bytes = make_pdf_from_deliverable(d)
         filename = f'{(d.title or d.kind).replace("/", "-")}.pdf'
         return Response(
