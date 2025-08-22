@@ -12,3 +12,5 @@ python-multipart
 stripe>=12.0.0
 reportlab
 email-validator
+python-jose[cryptography]
+passlib[bcrypt]
