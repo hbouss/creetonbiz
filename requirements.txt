@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-dotenv
 openai
 pydantic
@@ -11,4 +11,3 @@ PyJWT
 python-multipart
 stripe>=12.0.0
 reportlab
-playwright

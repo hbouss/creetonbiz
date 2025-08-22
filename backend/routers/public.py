@@ -1,5 +1,4 @@
 # backend/routers/public.py
-import public
 from fastapi import APIRouter, HTTPException, Depends, status, Form
 from pydantic import EmailStr
 from fastapi.responses import JSONResponse
