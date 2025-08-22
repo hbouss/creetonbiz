@@ -1,9 +1,7 @@
 # backend/services/premium_service.py
-import _uuid
 import os
 import re
 import hashlib
-import math
 import random
 import json, datetime, uuid
 from textwrap import dedent
