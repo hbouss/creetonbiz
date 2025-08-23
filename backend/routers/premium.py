@@ -3,7 +3,7 @@ import base64, mimetypes, os
 import time
 from datetime import datetime
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
 from fastapi.responses import FileResponse
 from sqlmodel import select
 from backend.schemas import (
@@ -19,7 +19,7 @@ from backend.services.premium_service import (
 from backend.dependencies import require_startnow, get_current_user
 from backend.services.deliverable_service import (save_deliverable, write_landing_file, render_offer_report_html,
                                                   render_brand_report_html, render_acquisition_report_html,
-                                                  render_business_plan_html, publish_landing_to_webroot,
+                                                  render_business_plan_html,
                                                   export_pdf_from_html, render_action_plan_html)
 from backend.db import get_session
 from backend.models import Project, User, Deliverable
@@ -280,41 +280,55 @@ async def landing_endpoint(
 
 @router.post("/landing/publish")
 async def publish_landing_endpoint(
+    request: Request,
     project_id: int = Query(..., gt=0),
     user=Depends(get_current_user),
 ):
     """
-    Publie la DERNIÈRE landing générée de ce projet dans le webroot Nginx et
-    renvoie l’URL publique.
+    Publie la dernière landing du projet dans backend/storage/landings/<project_id>/index.html
+    et renvoie l'URL publique servie par /public/... (StaticFiles).
     """
     proj = _get_project_and_unlock_if_needed(user.id, project_id)
 
-    # Récupère la landing la plus récente
+    # 1) Récupérer le dernier deliverable "landing"
     with get_session() as s:
-        q = select(Deliverable).where(
-            Deliverable.user_id == user.id,
-            Deliverable.project_id == project_id,
-            Deliverable.kind == "landing",
-        ).order_by(Deliverable.created_at.desc())
-        d = s.exec(q).first()
+        d = s.exec(
+            select(Deliverable)
+            .where(
+                Deliverable.user_id == user.id,
+                Deliverable.project_id == project_id,
+                Deliverable.kind == "landing",
+            )
+            .order_by(Deliverable.created_at.desc())
+        ).first()
 
     if not d or not d.file_path:
         raise HTTPException(status_code=404, detail="Aucune landing HTML trouvée pour ce projet.")
 
-    try:
-        url = publish_landing_to_webroot(user.id, project_id, proj.title, d.file_path)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Publication échouée: {e}")
+    # 2) Lire l'HTML source
+    src_path = Path(d.file_path)
+    if not src_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier HTML de la landing introuvable.")
+    html = src_path.read_text(encoding="utf-8")
 
-        # ✅ Mettre à jour le livrable EXISTANT (pas de nouveau livrable)
+    # 3) Écrire dans le répertoire public servi par StaticFiles: /public/landings/<project_id>/index.html
+    out_dir = Path(STORAGE_DIR) / "landings" / str(project_id)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "index.html").write_text(html, encoding="utf-8")
+
+    # 4) Construire l'URL absolue correcte
+    base = str(request.base_url).rstrip("/")
+    url = f"{base}/public/landings/{project_id}/"
+
+    # 5) Mettre à jour le livrable existant (public_url + published_at)
     with get_session() as s:
-            dd = s.get(Deliverable, d.id)
-            payload = dict(dd.json_content or {})
-            payload["public_url"] = url
-            payload["published_at"] = datetime.utcnow().isoformat()
-            dd.json_content = payload
-            s.add(dd)
-            s.commit()
+        dd = s.get(Deliverable, d.id)
+        payload = dict(dd.json_content or {})
+        payload["public_url"] = url
+        payload["published_at"] = datetime.utcnow().isoformat()
+        dd.json_content = payload
+        s.add(dd)
+        s.commit()
 
     return {"ok": True, "url": url}
 
