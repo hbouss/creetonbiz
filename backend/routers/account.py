@@ -98,3 +98,24 @@ def delete_me(payload: DeleteMeIn, user = Depends(get_current_user)):
         s.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/me/delete", status_code=status.HTTP_204_NO_CONTENT)
+def delete_me_post(payload: DeleteMeIn, user = Depends(get_current_user)):
+    with get_session() as s:
+        db_user = s.get(User, user.id)
+        if not db_user:
+            raise HTTPException(404, "Utilisateur introuvable")
+        if not verify_password(payload.current_password, db_user.hashed_password):
+            raise HTTPException(400, "Mot de passe invalide")
+        if payload.cancel_stripe and getattr(db_user, "stripe_subscription_id", None) and settings.STRIPE_SECRET_KEY:
+            try:
+                stripe.api_key = settings.STRIPE_SECRET_KEY
+                stripe.Subscription.delete(db_user.stripe_subscription_id)
+            except Exception as e:
+                print("[Stripe] Erreur d’annulation:", e)
+        s.exec(delete(Deliverable).where(Deliverable.user_id == db_user.id))
+        s.exec(delete(BusinessIdea).where(BusinessIdea.user_id == db_user.id))
+        s.delete(db_user)
+        s.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

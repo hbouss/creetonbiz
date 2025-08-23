@@ -28,22 +28,27 @@ export default function Settings() {
   }
 
   async function deleteAccount(e) {
-    e.preventDefault()
-    setMsg(''); setErr('')
-    if (!confirm("Supprimer définitivement votre compte et vos livrables ?")) return
-    try {
-      const res = await fetch('/api/me', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm: true }),
-      })
-      if (!res.ok) throw new Error(await res.text())
-      logout?.()
-      window.location.href = '/login'
-    } catch (e) {
-      setErr(e.message || 'Erreur lors de la suppression du compte.')
-    }
+  e.preventDefault();
+  setMsg(""); setErr("");
+
+  // Demande le mot de passe à l’utilisateur (ex: via un <input/> contrôlé)
+  if (!pwd) { setErr("Entre ton mot de passe."); return; }
+
+  if (!confirm("Supprimer définitivement votre compte et vos livrables ?")) return;
+
+  try {
+    await deleteMe({
+      current_password: pwd,        // <— DOIT correspondre au schéma backend
+      cancel_stripe: cancelStripe,  // <— checkbox optionnelle
+    });
+    // Nettoyage session + redirection
+    localStorage.removeItem("auth_token");
+    logout?.();
+    window.location.href = "/login";
+  } catch (e) {
+    setErr(e.message || "Erreur lors de la suppression du compte.");
   }
+}
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
