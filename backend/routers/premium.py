@@ -3,8 +3,7 @@ import base64, mimetypes, os
 import time
 from datetime import datetime
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlmodel import select
 from backend.schemas import (
     ProfilRequest, OfferResponse, BusinessModelResponse, BrandResponse,
@@ -14,7 +13,7 @@ from backend.services.calendar_service import ics_from_events
 from backend.services.premium_service import (
     generate_offer, generate_brand,
     generate_landing, generate_marketing, generate_plan, check_domains_availability as check_domains_namecheap,
-    generate_acquisition_structured_for_marketing, generate_business_plan_structured, _ics_from_events,
+    generate_acquisition_structured_for_marketing, generate_business_plan_structured,
 )
 from backend.dependencies import require_startnow, get_current_user
 from backend.services.deliverable_service import (save_deliverable, write_landing_file, render_offer_report_html,
@@ -192,7 +191,7 @@ async def brand_endpoint(
     data = await generate_brand(profil, idea_snapshot=proj.idea_snapshot)
 
     # Récupérer le bloc structuré (même logique que generate_brand) pour le stocker
-    from backend.services.premium_service import _ask_brand_structured, _profil_dump, _verbatim_block, _parse_json_strict
+    from backend.services.premium_service import _ask_brand_structured
     structured = await _ask_brand_structured(profil, proj.idea_snapshot)
     # complétion côté serveur au cas où
     from backend.services.premium_service import _ensure_brand_completeness
@@ -271,7 +270,7 @@ async def landing_endpoint(
     public_url = f"/public/{rel}".replace("\\", "/")
 
     save_deliverable(
-        user.id, "landing", {"html_saved": True, "public_url": public_url},
+        user.id, "landing", {"html_saved": True},
         title="Landing HTML", file_path=fp, project_id=project_id
     )
     # Facultatif: renvoyer l'URL si tu peux élargir le schéma. Sinon log/console.
@@ -284,13 +283,9 @@ async def publish_landing_endpoint(
     project_id: int = Query(..., gt=0),
     user=Depends(get_current_user),
 ):
-    """
-    Publie la dernière landing du projet dans backend/storage/landings/<project_id>/index.html
-    et renvoie l'URL publique servie par /public/... (StaticFiles).
-    """
     proj = _get_project_and_unlock_if_needed(user.id, project_id)
 
-    # 1) Récupérer le dernier deliverable "landing"
+    # Dernière landing pour ce projet
     with get_session() as s:
         d = s.exec(
             select(Deliverable)
@@ -305,22 +300,22 @@ async def publish_landing_endpoint(
     if not d or not d.file_path:
         raise HTTPException(status_code=404, detail="Aucune landing HTML trouvée pour ce projet.")
 
-    # 2) Lire l'HTML source
-    src_path = Path(d.file_path)
-    if not src_path.exists():
-        raise HTTPException(status_code=404, detail="Fichier HTML de la landing introuvable.")
-    html = src_path.read_text(encoding="utf-8")
+    src = Path(d.file_path)
+    if not src.exists():
+        raise HTTPException(status_code=404, detail="Fichier HTML introuvable.")
 
-    # 3) Écrire dans le répertoire public servi par StaticFiles: /public/landings/<project_id>/index.html
+    html = src.read_text(encoding="utf-8")
+
+    # Écrire dans /public/landings/<id>/index.html
     out_dir = Path(STORAGE_DIR) / "landings" / str(project_id)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "index.html").write_text(html, encoding="utf-8")
 
-    # 4) Construire l'URL absolue correctee
+    # URL absolue backend (évite le relatif côté Netlify)
     base = str(request.base_url).rstrip("/")
-    url = f"{base}/public/landings/{project_id}/"
+    url = f"{base}/public/landings/{project_id}/index.html"
 
-    # 5) Mettre à jour le livrable existant (public_url + published_at)
+    # Mettre à jour le livrable existant
     with get_session() as s:
         dd = s.get(Deliverable, d.id)
         payload = dict(dd.json_content or {})

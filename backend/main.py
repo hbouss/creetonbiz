@@ -16,6 +16,7 @@ from backend.routers.deliverables import router as deliverables_router
 from backend.routers.account import router as account_router
 from backend.routers.projects import router as projects_router
 from backend.routers.ideas import router as ideas_router
+from backend.services.deliverable_service import STORAGE_DIR
 
 app = FastAPI()
 app.add_middleware(
@@ -25,10 +26,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-STORAGE_ROOT = Path(__file__).resolve().parent / "storage"  # ou importe STORAGE_DIR
-app.mount("/public", StaticFiles(directory=STORAGE_ROOT), name="public")
+
+# 👇 assure l’existence du dossier
+STORAGE_ROOT = Path(STORAGE_DIR)
 STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
 
+# 👇 html=True pour servir index.html sur les répertoires
+app.mount("/public", StaticFiles(directory=str(STORAGE_ROOT), html=True), name="public")
 # Création des tables si elles n'existent pas
 init_db()
 
