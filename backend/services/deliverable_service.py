@@ -1718,7 +1718,10 @@ async def export_pdf_from_html(
     out_file = Path(out_path).resolve()
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch()
+        browser = await p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage"]
+        )
         context = await browser.new_context()
         page = await context.new_page()
         await page.goto(in_path.as_uri(), wait_until="networkidle")
