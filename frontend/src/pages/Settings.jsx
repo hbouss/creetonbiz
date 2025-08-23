@@ -1,11 +1,15 @@
 // src/pages/Settings.jsx
 import React, { useContext, useState } from 'react'
 import { AuthContext } from '../contexts/AuthContext'
+import { deleteMe } from "../api";
 
 export default function Settings() {
-  const { user, logout } = useContext(AuthContext) || {}
-  const [msg, setMsg] = useState('')
-  const [err, setErr] = useState('')
+  const [pwd, setPwd] = useState("");
+  const [cancelStripe, setCancelStripe] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const { logout, user } = useContext(AuthContext);
 
   async function changePassword(e) {
     e.preventDefault()
@@ -29,24 +33,28 @@ export default function Settings() {
 
   async function deleteAccount(e) {
   e.preventDefault();
-  setMsg(""); setErr("");
+  setMsg("");
+  setErr("");
 
-  // Demande le mot de passe à l’utilisateur (ex: via un <input/> contrôlé)
-  if (!pwd) { setErr("Entre ton mot de passe."); return; }
-
+  if (!pwd) {
+    setErr("Entre ton mot de passe.");
+    return;
+  }
   if (!confirm("Supprimer définitivement votre compte et vos livrables ?")) return;
 
+  setBusy(true);
   try {
     await deleteMe({
-      current_password: pwd,        // <— DOIT correspondre au schéma backend
-      cancel_stripe: cancelStripe,  // <— checkbox optionnelle
+      current_password: pwd,        // le backend attend exactement ce champ
+      cancel_stripe: cancelStripe,  // checkbox optionnelle
     });
-    // Nettoyage session + redirection
-    localStorage.removeItem("auth_token");
+    try { localStorage.removeItem("auth_token"); } catch {}
     logout?.();
     window.location.href = "/login";
   } catch (e) {
     setErr(e.message || "Erreur lors de la suppression du compte.");
+  } finally {
+    setBusy(false);
   }
 }
 
@@ -68,10 +76,37 @@ export default function Settings() {
           <button className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500">Mettre à jour</button>
         </form>
 
-        <form onSubmit={deleteAccount} className="p-4 bg-gray-800 rounded">
+        <form onSubmit={deleteAccount} className="p-4 bg-gray-800 rounded space-y-3">
           <h2 className="text-lg font-semibold mb-2 text-red-300">Supprimer mon compte</h2>
-          <p className="text-sm text-gray-400 mb-3">Cette action est irréversible.</p>
-          <button className="px-4 py-2 rounded bg-red-700 hover:bg-red-600">Supprimer définitivement</button>
+          <p className="text-sm text-gray-400">Cette action est irréversible.</p>
+
+          <label className="block text-sm">Mot de passe</label>
+          <input
+            type="password"
+            value={pwd}
+            onChange={(e) => setPwd(e.target.value)}
+            placeholder="Confirme ton mot de passe"
+            className="w-full p-2 rounded bg-gray-700"
+            required
+          />
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={cancelStripe}
+              onChange={(e) => setCancelStripe(e.target.checked)}
+              className="accent-red-600"
+            />
+            Annuler aussi mon abonnement Stripe (si actif)
+          </label>
+
+          <button
+            type="submit"
+            disabled={busy || !pwd}
+            className="px-4 py-2 rounded bg-red-700 hover:bg-red-600 disabled:opacity-60"
+          >
+            {busy ? "Suppression..." : "Supprimer définitivement"}
+          </button>
         </form>
       </div>
     </div>
