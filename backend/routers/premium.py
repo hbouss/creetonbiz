@@ -316,7 +316,7 @@ async def publish_landing_endpoint(
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "index.html").write_text(html, encoding="utf-8")
 
-    # 4) Construire l'URL absolue correcte
+    # 4) Construire l'URL absolue correctee
     base = str(request.base_url).rstrip("/")
     url = f"{base}/public/landings/{project_id}/"
 
