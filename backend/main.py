@@ -27,6 +27,7 @@ app.add_middleware(
 )
 STORAGE_ROOT = Path(__file__).resolve().parent / "storage"  # ou importe STORAGE_DIR
 app.mount("/public", StaticFiles(directory=STORAGE_ROOT), name="public")
+STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
 
 # Création des tables si elles n'existent pas
 init_db()
