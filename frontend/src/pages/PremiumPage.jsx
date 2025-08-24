@@ -30,42 +30,30 @@ export default function PremiumPage() {
 
   // 1) Au retour de Stripe : on confirme la session + refresh me + redirection → /dashboard
   useEffect(() => {
-    if (!success || !sessionId || confirmingRef.current) return
-    confirmingRef.current = true
+  if (!success || !sessionId || confirmingRef.current) return;
+  confirmingRef.current = true;
 
-    ;(async () => {
-      try {
-        // Confirme la session côté backend (idempotent)
-        try {
-          await verifyCheckoutSession(sessionId); // ira sur `${VITE_API_URL}/api/verify-checkout-session`
-        } catch (e) {
-          console.warn('verify-checkout-session non OK:', e);
-        }
-        // Si verify échoue (ex: webhook seul), on tente tout de même un refresh du profil
-        if (!resp.ok) {
-          const txt = await resp.text().catch(() => '')
-          console.warn('verify-checkout-session non OK:', resp.status, txt)
-        }
-
-        await (refreshMe?.())
-
-        setBanner({
-          type: 'success',
-          text: `Paiement confirmé ✅ ${sessionId ? `(session ${sessionId})` : ''}. Votre pack est activé.`,
-        })
-
-        // Laisse la bannière 1.2s puis redirige vers le Dashboard (où on liste les livrables)
-        setTimeout(() => navigate('/dashboard', { replace: true }), 1200)
-      } catch (e) {
-        console.error(e)
-        setBanner({
-          type: 'warning',
-          text: 'Paiement confirmé, mais la confirmation de session a échoué. Rafraîchis la page ou reconnecte-toi.',
-        })
-        confirmingRef.current = false
-      }
-    })()
-  }, [success, sessionId, token, refreshMe, navigate])
+  (async () => {
+    let verified = false;
+    try {
+      await verifyCheckoutSession(sessionId); // passe par VITE_API_URL + envoie l’Authorization
+      verified = true;
+    } catch (e) {
+      // Ici, pas grave : webhook a (souvent) déjà mis à jour le compte
+      console.warn('verify-checkout-session failed:', e);
+    } finally {
+      // On rafraîchit le profil quoi qu’il arrive puis on redirige
+      try { await (refreshMe?.()); } catch {}
+      setBanner({
+        type: verified ? 'success' : 'info',
+        text: verified
+          ? 'Paiement confirmé ✅. Votre pack est activé.'
+          : 'Paiement confirmé ✅. Mise à jour en cours…',
+      });
+      setTimeout(() => navigate('/dashboard', { replace: true }), 1000);
+    }
+  })();
+}, [success, sessionId, refreshMe, navigate]);
 
   // 2) Gestion “paiement annulé”
   useEffect(() => {
