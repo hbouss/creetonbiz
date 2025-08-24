@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AuthContext } from '../contexts/AuthContext'
 import { loadStripe } from '@stripe/stripe-js'
 import PackComparison from '../components/PackComparison.jsx'
+import { createCheckoutSession, verifyCheckoutSession } from '../api';
 
 // Initialise Stripe (nécessite VITE_STRIPE_PUBLISHABLE_KEY dans frontend/.env)
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
@@ -35,10 +36,11 @@ export default function PremiumPage() {
     ;(async () => {
       try {
         // Confirme la session côté backend (idempotent)
-        const resp = await fetch(`/api/verify-checkout-session?session_id=${encodeURIComponent(sessionId)}`, {
-          method: 'GET',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        })
+        try {
+          await verifyCheckoutSession(sessionId); // ira sur `${VITE_API_URL}/api/verify-checkout-session`
+        } catch (e) {
+          console.warn('verify-checkout-session non OK:', e);
+        }
         // Si verify échoue (ex: webhook seul), on tente tout de même un refresh du profil
         if (!resp.ok) {
           const txt = await resp.text().catch(() => '')
@@ -145,26 +147,16 @@ export default function PremiumPage() {
 
     try {
       // Endpoint backend : POST /api/create-checkout-session
-      const resp = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ pack: selectedPack }),
-      })
-
-      if (!resp.ok) {
-        const txt = await resp.text()
-        throw new Error(`Erreur ${resp.status}: ${txt}`)
+      const { sessionId, url } = await createCheckoutSession(selectedPack);
+// si ton backend renvoie seulement {sessionId}, garde la partie stripe.
+// s'il renvoie aussi {url}, tu peux faire un redirect direct :
+      if (url) {
+        window.location.href = url;
+        return;
       }
-
-      const { sessionId } = await resp.json()
-      const stripe = await stripePromise
-      if (!stripe) throw new Error('Stripe non initialisé')
-
-      const { error: stripeErr } = await stripe.redirectToCheckout({ sessionId })
-      if (stripeErr) throw stripeErr
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error('Stripe non initialisé');
+      await stripe.redirectToCheckout({ sessionId });
     } catch (e) {
       console.error(e)
       setError(e.message || 'Erreur lors de la redirection vers le paiement')
