@@ -20,6 +20,17 @@ export default function HomePage() {
       setResult(data);
       setStep("result");
     } catch (e) {
+      const msg = String(e?.message || '');
+      // 402 = quota free atteint → redirection Premium
+      if (msg.includes('Erreur 402') || msg.includes('FREE_LIMIT_REACHED')) {
+        navigate('/premium?reason=free_limit', { replace: true });
+        return;
+      }
+      // 401 = non authentifié → login
+      if (msg.includes('Erreur 401') || msg.toLowerCase().includes('unauthorized')) {
+        navigate('/login');
+        return;
+      }
       setError(e.response?.data?.detail || e.message);
       setStep("home");
     }

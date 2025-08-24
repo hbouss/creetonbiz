@@ -6,7 +6,7 @@ from sqlmodel import select
 import json
 import logging
 from backend.schemas import ProfilRequest, BusinessResponse
-from backend.models import BusinessIdea
+from backend.models import BusinessIdea, User
 from backend.db import get_session
 from backend.services.openai_service import generate_business_idea
 from backend.dependencies import (
@@ -18,12 +18,19 @@ from backend.dependencies import (
 router = APIRouter(prefix="/api", tags=["public"])
 logger = logging.getLogger(__name__)
 
-
+# petit helper
+def _enforce_free_quota(user: User):
+    if user.plan == "free" and (user.idea_used or 0) >= 1:
+        # 402 = Payment Required -> le front sait rediriger vers /premium
+        raise HTTPException(status_code=402, detail="FREE_LIMIT_REACHED")
 @router.post("/generate", response_model=BusinessResponse)
 async def generate(
     profil: ProfilRequest,
-    user=Depends(get_current_user_optional),
+    user: User = Depends(get_current_user),   # ✅ auth obligatoire
 ):
+    # ✅ blocage avant tout traitement
+    _enforce_free_quota(user)
+
     max_attempts = 3
     raw = None
     data = None
@@ -36,16 +43,15 @@ async def generate(
         except json.JSONDecodeError:
             logger.warning(f"[generate] tentative {attempt} échouée, JSON invalide : {raw!r}")
             if attempt == max_attempts:
-                # on remonte l'erreur après la dernière tentative
                 raise HTTPException(
                     status_code=500,
                     detail=f"Réponse IA non au format JSON (après {max_attempts} essais). Contenu reçu : {raw}"
                 )
 
-        # à ce stade `data` est un dict valide
+    # ✅ on sauvegarde l’idée
     with get_session() as session:
         idea = BusinessIdea(
-            user_id=user.id if user else None,
+            user_id=user.id,                      # 👈 maintenant toujours défini
             secteur=profil.secteur,
             objectif=profil.objectif,
             competences=profil.competences,
@@ -59,6 +65,14 @@ async def generate(
         session.add(idea)
         session.commit()
         session.refresh(idea)
+
+    # ✅ incrémenter le compteur si plan free
+    if user.plan == "free":
+        with get_session() as session2:
+            me = session2.get(User, user.id)
+            me.idea_used = (me.idea_used or 0) + 1
+            session2.add(me)
+            session2.commit()
 
     return BusinessResponse.from_orm(idea)
 
