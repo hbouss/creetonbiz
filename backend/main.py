@@ -4,7 +4,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
-
+from backend.db import engine
+from sqlalchemy import text
 # importe et initialise la BDD
 from backend.db import init_db
 from backend.routers.public import router as public_router
@@ -44,6 +45,12 @@ STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
 app.mount("/public", StaticFiles(directory=str(STORAGE_ROOT), html=True), name="public")
 # Création des tables si elles n'existent pas
 init_db()
+
+# ⬇️ crée la colonne si elle n'existe pas (prod & local)
+with engine.begin() as conn:
+    conn.execute(text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;"
+    ))
 
 @app.get("/")
 def read_root():

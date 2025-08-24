@@ -9,6 +9,7 @@ import RegisterPage from './pages/RegisterPage'
 import PremiumPage  from './pages/PremiumPage'
 import DashboardPage from './pages/DashboardPage'
 import Settings      from './pages/Settings'
+import AdminPage    from './pages/AdminPage'
 
 // Route protégée
 import ProtectedRoute from './components/ProtectedRoute'
@@ -57,6 +58,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+          <Route path="/admin" element={<AdminPage />} />
 
         {/* TOUT LE RESTE → / (qui renverra éventuellement sur /login si non auth) */}
         <Route path="*" element={<Navigate to="/" replace />} />

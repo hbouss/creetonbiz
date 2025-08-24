@@ -19,6 +19,7 @@ class MeOut(BaseModel):
     plan: str
     # Ces champs existent si tu as suivi les étapes précédentes. Sinon, garde les par défaut.
     startnow_credits: int = 0
+    is_admin: bool = False
 
 class ChangePasswordIn(BaseModel):
     current_password: str = Field(min_length=6)
@@ -37,6 +38,7 @@ def me(user = Depends(get_current_user)):
         email=user.email,
         plan=user.plan,
         startnow_credits=getattr(user, "startnow_credits", 0) or 0,
+        is_admin=getattr(user, "is_admin", False),  # ⬅️ ADD
     )
 
 @router.put("/me/password", status_code=status.HTTP_204_NO_CONTENT)

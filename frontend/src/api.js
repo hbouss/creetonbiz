@@ -280,3 +280,11 @@ export function openPlanICS(projectId) {
   // Ouvre dans le même onglet -> déclenche le téléchargement
   window.location.href = url;
 }
+
+export const adminListUsers = () => request("/api/admin/users", { method: "GET" });
+
+export const adminUpdateUser = (userId, patch) =>
+  request(`/api/admin/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch), // { plan?, startnow_credits?, idea_used?, is_admin?, cancel_stripe? }
+  });
