@@ -265,7 +265,7 @@ const fireBpHelp = React.useCallback(
         </div>
       )}
 
-      {/* Header */}
+      {/* Headerr */}
       <header className="bg-gray-800 shadow-md rounded-lg p-4 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Espace client</h1>
