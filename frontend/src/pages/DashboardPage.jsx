@@ -14,7 +14,7 @@ import {
   deleteIdea,
   deleteProject,
   publishLanding,
-  openBillingPortal,
+  openBillingPortal, goToBillingPortal,
 } from '../api.js'
 import LandingHelp from "../components/LandingHelpRaw.jsx";
 import BusinessPlanHelp from "../components/BusinessPlanHelp.jsx"; // adapte le chemin
@@ -180,15 +180,6 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleManageSubscription() {
-    try {
-      const { url } = await openBillingPortal();
-      window.location.href = url; // redirection vers le Portal
-    } catch (e) {
-      setError(e.message || "Impossible d’ouvrir le portail Stripe.");
-    }
-  }
-
 async function handleOpenPortal() {
   try {
     const { url } = await openBillingPortal();
@@ -295,11 +286,11 @@ const fireBpHelp = React.useCallback(
 
           {(user?.plan === "infinity" || user?.plan === "startnow") && (
             <button
-            onClick={handleOpenPortal}
-            className="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded text-white text-sm"
-          >
-            Gérer mon abonnement
-          </button>
+              onClick={() => goToBillingPortal()}
+              className="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded text-white text-sm"
+            >
+              Gérer mon abonnement
+            </button>
           )}
           {(isInfinity || user?.plan === 'startnow') && (
             <button

@@ -126,6 +126,12 @@ export const openBillingPortal = () =>
     method: "POST",
   });
 
+export function goToBillingPortal() {
+  // Pas de fetch, on laisse le navigateur suivre la redirection 303 du backend
+  const BASE_URL = (import.meta.env.VITE_API_URL?.replace(/\/$/, "")) || "http://127.0.0.1:8000";
+  window.location.href = `${BASE_URL}/api/billing-portal/redirect`;
+}
+
 /* =========================================================
    PROJETS (listing + filtres + CRUD minimal)
    (adapte les routes si ton backend diffère)
