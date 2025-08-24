@@ -166,17 +166,31 @@ def create_billing_portal_session(user: User = Depends(get_current_user)):
     return {"url": session.url}
 
 @router.get("/billing-portal/redirect")
-def redirect_billing_portal_session(user: User = Depends(get_current_user)):
+def redirect_billing_portal_session(
+    request: Request,
+    token: str | None = Query(default=None),
+):
+    # 1) Auth manuelle: token en query OU Authorization header si présent
+    current = None
+    if token:
+        current = get_user_from_token(token)
+    else:
+        auth = request.headers.get("Authorization")
+        if auth and auth.startswith("Bearer "):
+            current = get_user_from_token(auth.split(" ", 1)[1])
+    if not current:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # 2) Stripe
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(500, "STRIPE_SECRET_KEY manquant")
     if not settings.FRONTEND_BASE_URL:
         raise HTTPException(500, "FRONTEND_BASE_URL manquant")
-
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    # Récupère/assure le customer_id Stripe
+    # 3) Assure le customer_id Stripe
     with get_session() as s:
-        me = s.get(User, user.id)
+        me = s.get(User, current.id)
         cid = getattr(me, "stripe_customer_id", None)
         if not cid:
             existing = stripe.Customer.list(email=me.email, limit=1).data
@@ -186,12 +200,11 @@ def redirect_billing_portal_session(user: User = Depends(get_current_user)):
                 created = stripe.Customer.create(email=me.email)
                 cid = created.id
             me.stripe_customer_id = cid
-            s.add(me)
-            s.commit()
+            s.add(me); s.commit()
 
+    # 4) Crée la session Portal et redirige
     session = stripe.billing_portal.Session.create(
         customer=cid,
         return_url=f"{settings.FRONTEND_BASE_URL}/settings"
     )
-    # 303 → navigation propre vers Stripe
     return RedirectResponse(session.url, status_code=303)

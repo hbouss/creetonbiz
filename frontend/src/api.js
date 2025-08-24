@@ -127,9 +127,11 @@ export const openBillingPortal = () =>
   });
 
 export function goToBillingPortal() {
-  // Pas de fetch, on laisse le navigateur suivre la redirection 303 du backend
-  const BASE_URL = (import.meta.env.VITE_API_URL?.replace(/\/$/, "")) || "http://127.0.0.1:8000";
-  window.location.href = `${BASE_URL}/api/billing-portal/redirect`;
+  const BASE_URL =
+    (import.meta.env.VITE_API_URL?.replace(/\/$/, "")) || "http://127.0.0.1:8000";
+  const t = localStorage.getItem("auth_token");
+  const q = t ? `?token=${encodeURIComponent(t)}` : "";
+  window.location.href = `${BASE_URL}/api/billing-portal/redirect${q}`;
 }
 
 /* =========================================================
