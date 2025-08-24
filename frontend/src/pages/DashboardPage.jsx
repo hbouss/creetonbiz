@@ -259,7 +259,7 @@ const fireBpHelp = React.useCallback(
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6 space-y-8">
-      {/* Overlay spinner global */}
+      {/* Overlay spinner globale */}
       {(convertingIdeaId || generatingProjectId) && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-gray-800 p-6 rounded-xl shadow-xl text-center">
