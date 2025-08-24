@@ -292,7 +292,7 @@ const fireBpHelp = React.useCallback(
     </p>
   </div>
 
-  {/* ACTIONS DESKTOP SEULEMENT */}
+  {/* ACTIONS DESKTOP */}
   <div className="hidden md:flex flex-wrap gap-2">
     {(user?.plan === "infinity" || user?.plan === "startnow") && (
       <button
@@ -329,49 +329,112 @@ const fireBpHelp = React.useCallback(
       Déconnexion
     </button>
   </div>
+
+  {/* HAMBURGER MOBILE */}
+  <button
+    type="button"
+    onClick={() => setMenuOpen(true)}
+    className="md:hidden inline-flex items-center gap-2 px-4 h-10 rounded-xl bg-indigo-600 text-white font-semibold shadow ring-2 ring-indigo-400/50"
+    aria-label="Ouvrir le menu"
+    aria-haspopup="dialog"
+    aria-expanded={menuOpen}
+    aria-controls="mobile-actions"
+  >
+    <span className="text-lg">☰</span>
+    <span>Menu</span>
+  </button>
 </header>
 
-      {/* ACTIONS MOBILE UNIQUEMENT – 5 boutons identiques */}
-<div className="md:hidden mt-3 grid grid-cols-1 gap-3">
-  {(user?.plan === "infinity" || user?.plan === "startnow") && (
-    <button
-      onClick={handleOpenPortal}
-      className="w-full h-12 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium"
-    >
-      {/* libellé court en mobile pour éviter de forcer une largeur différente */}
-      Abonnement
-    </button>
-  )}
+      {/* MOBILE DRAWER */}
+<div
+  id="mobile-actions"
+  className={`md:hidden fixed inset-0 z-50 ${menuOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+  role="dialog"
+  aria-modal="true"
+>
+  {/* Backdrop */}
+  <div
+    onClick={() => setMenuOpen(false)}
+    className={`absolute inset-0 transition-opacity duration-200 ${menuOpen ? 'opacity-100 bg-black/50' : 'opacity-0'}`}
+  />
 
-  {(isInfinity || user?.plan === 'startnow') && (
-    <button
-      onClick={() => navigate('/')}
-      className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"
-    >
-      Générer idée
-    </button>
-  )}
-
-  <button
-    onClick={handleBuyCredits}
-    className="w-full h-12 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-gray-900 text-sm font-medium"
+  {/* Panel */}
+  <div
+    className={`absolute right-0 top-0 h-full w-10/12 max-w-xs bg-gray-800 shadow-2xl border-l border-gray-700
+                transition-transform duration-200 ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}
   >
-    Racheter jetons
-  </button>
+    <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+      <span className="text-white font-semibold">Menu</span>
+      <button
+        onClick={() => setMenuOpen(false)}
+        className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700"
+        aria-label="Fermer le menu"
+      >
+        ✕
+      </button>
+    </div>
 
-  <button
-    onClick={() => navigate('/settings')}
-    className="w-full h-12 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium"
-  >
-    Settings
-  </button>
+    <div className="p-4 space-y-3">
+      {/* ADMIN (si admin) */}
+      {user?.is_admin && (
+        <button
+          onClick={() => { setMenuOpen(false); navigate('/admin') }}
+          className="w-full h-12 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-sm font-medium"
+        >
+          Admin
+        </button>
+      )}
 
-  <button
-    onClick={() => { logout(); navigate('/login') }}
-    className="w-full h-12 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium"
-  >
-    Déconnexion
-  </button>
+      {/* Abonnement (si abonné) */}
+      {(user?.plan === "infinity" || user?.plan === "startnow") && (
+        <button
+          onClick={() => { setMenuOpen(false); handleOpenPortal() }}
+          className="w-full h-12 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium"
+        >
+          Abonnement
+        </button>
+      )}
+
+      {/* Générer idée (si abonné) */}
+      {(isInfinity || user?.plan === 'startnow') && (
+        <button
+          onClick={() => { setMenuOpen(false); navigate('/') }}
+          className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"
+        >
+          Générer idée
+        </button>
+      )}
+
+      {/* Racheter jetons */}
+      <button
+        onClick={() => { setMenuOpen(false); handleBuyCredits() }}
+        className="w-full h-12 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-gray-900 text-sm font-medium"
+      >
+        Racheter jetons
+      </button>
+
+      {/* Settings */}
+      <button
+        onClick={() => { setMenuOpen(false); navigate('/settings') }}
+        className="w-full h-12 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium"
+      >
+        Settings
+      </button>
+
+      {/* Déconnexion */}
+      <button
+        onClick={() => { setMenuOpen(false); logout(); navigate('/login') }}
+        className="w-full h-12 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium"
+      >
+        Déconnexion
+      </button>
+    </div>
+
+    {/* Petit rappel plan/crédits */}
+    <div className="mt-auto p-4 text-xs text-gray-400 border-t border-gray-700">
+      {user?.email} • plan <strong className="text-gray-200">{user?.plan}</strong> • crédits <strong className="text-gray-200">{credits}</strong>
+    </div>
+  </div>
 </div>
 
       {/* Idées & Formulaire */}

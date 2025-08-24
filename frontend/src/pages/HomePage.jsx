@@ -37,11 +37,11 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col items-center justify-center p-4">
-      {step === "home" && <IdeaForm onSubmit={handleGenerate} error={error} />}
-      {step === "loading" && <Loader />}
-      {step === "result" && result && (
-        <div className="space-y-6 text-center">
+    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
+        {step === "home" && <IdeaForm onSubmit={handleGenerate} error={error} />}
+        {step === "loading" && <Loader />}
+        {step === "result" && result && (
+          <div className="flex-1 mx-auto max-w-screen-sm px-4 py-6 space-y-6 text-center">
           <Result data={result} onReset={() => setStep("home")} />
           <button
             onClick={() => navigate('/premium', { state: { idea: result } })}
