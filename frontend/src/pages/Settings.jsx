@@ -48,13 +48,12 @@ export default function Settings() {
       current_password: pwd,        // le backend attend exactement ce champ
       cancel_stripe: cancelStripe,  // checkbox optionnelle
     });
-    try { localStorage.removeItem("auth_token"); } catch {}
+    // Succès → 204 : nettoie la session et redirige
+    localStorage.removeItem("auth_token");
     logout?.();
     window.location.href = "/login";
   } catch (e) {
     setErr(e.message || "Erreur lors de la suppression du compte.");
-  } finally {
-    setBusy(false);
   }
 }
 
