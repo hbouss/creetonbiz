@@ -126,3 +126,13 @@ def verify_checkout_session(
         credits = me.startnow_credits
 
     return {"ok": True, "pack": pack, "startnow_credits": credits}
+
+@router.post("/billing-portal")
+def create_billing_portal_session(user=Depends(get_current_user)):
+    if not user.stripe_customer_id:
+        raise HTTPException(400, "Aucun client Stripe lié")
+    session = stripe.billing_portal.Session.create(
+        customer=user.stripe_customer_id,
+        return_url=f"{settings.FRONTEND_BASE_URL}/dashboard",
+    )
+    return {"url": session.url}

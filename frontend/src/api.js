@@ -121,6 +121,20 @@ export const verifyCheckoutSession = (sessionId) =>
     method: "GET",
   });
 
+export const openBillingPortal = async () => {
+  const res = await fetch("/api/billing-portal", {
+    method: "POST",
+    headers: {
+      ...(localStorage.getItem("auth_token")
+        ? { Authorization: `Bearer ${localStorage.getItem("auth_token")}` }
+        : {}),
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json(); // { url }
+};
+
 /* =========================================================
    PROJETS (listing + filtres + CRUD minimal)
    (adapte les routes si ton backend diffère)

@@ -38,6 +38,9 @@ class User(SQLModel, table=True):
     stripe_subscription_id: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+    # 👇👇👇  AJOUTE CETTE LIGNE
+    is_admin: bool = Field(default=False, nullable=False)
+
 # ✅ NEW : Projet = 1 crédit StartNow → 1 nouveau projet (tous les livrables y sont rattachés)
 # ──────────────────────────────────────────────────────────────────────────────
 class Project(SQLModel, table=True):

@@ -14,7 +14,7 @@ import {
   deleteIdea,
   deleteProject,
   publishLanding,
-  openPlanICS
+  openPlanICS, openBillingPortal
 } from '../api.js'
 import LandingHelp from "../components/LandingHelpRaw.jsx";
 import BusinessPlanHelp from "../components/BusinessPlanHelp.jsx"; // adapte le chemin
@@ -180,6 +180,15 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleManageSubscription() {
+    try {
+      const { url } = await openBillingPortal();
+      window.location.href = url; // redirection vers le Portal
+    } catch (e) {
+      setError(e.message || "Impossible d’ouvrir le portail Stripe.");
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (credits <= 0) { setError('Aucun crédit disponible.'); return }
@@ -265,6 +274,24 @@ const fireBpHelp = React.useCallback(
           </p>
         </div>
         <div className="flex gap-2">
+
+          {user?.is_admin && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-white text-sm"
+            >
+              Admin
+            </button>
+          )}
+
+          {(user?.plan === "infinity" || user?.plan === "startnow") && (
+            <button
+              onClick={handleManageSubscription}
+              className="px-3 py-1 bg-amber-600 hover:bg-amber-500 rounded text-gray-900 text-sm"
+            >
+              Gérer mon abonnement
+            </button>
+          )}
           {(isInfinity || user?.plan === 'startnow') && (
             <button
               onClick={() => navigate('/')}

@@ -32,3 +32,9 @@ def require_startnow(user = Depends(get_current_user)):
             detail="Accès réservé au pack StartNow."
         )
     return user
+
+
+def require_admin(user = Depends(get_current_user)):
+    if not getattr(user, "is_admin", False):
+        raise HTTPException(403, "Admin requis")
+    return user

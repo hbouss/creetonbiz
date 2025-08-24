@@ -17,6 +17,7 @@ from backend.routers.account import router as account_router
 from backend.routers.projects import router as projects_router
 from backend.routers.ideas import router as ideas_router
 from backend.services.deliverable_service import STORAGE_DIR
+from backend.routers.admin import router as admin_router
 
 app = FastAPI()
 
@@ -58,3 +59,5 @@ app.include_router(deliverables_router, prefix="/api")
 app.include_router(account_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(ideas_router)
+
+app.include_router(admin_router, prefix="/api")
