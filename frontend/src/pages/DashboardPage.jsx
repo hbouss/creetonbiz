@@ -286,7 +286,7 @@ const fireBpHelp = React.useCallback(
 
           {(user?.plan === "infinity" || user?.plan === "startnow") && (
             <button
-              onClick={() => goToBillingPortal()}
+              onClick={handleOpenPortal}
               className="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded text-white text-sm"
             >
               Gérer mon abonnement
