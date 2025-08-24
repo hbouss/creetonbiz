@@ -27,7 +27,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 export default function DashboardPage() {
   const { user, refreshMe, logout } = useContext(AuthContext)
   const navigate = useNavigate()
-
+  const [menuOpen, setMenuOpen] = useState(false);
   const [ideas, setIdeas] = useState([])
   const [projects, setProjects] = useState([])
   const [deliverablesMap, setDeliverablesMap] = useState({})
@@ -249,7 +249,7 @@ const fireBpHelp = React.useCallback(
 );
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-6 space-y-8">
+    <div className="min-h-screen bg-gray-900 text-gray-100 p-4 sm:p-6 space-y-8 overflow-x-hidden">
       {/* Overlay spinner globale */}
       {(convertingIdeaId || generatingProjectId) && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
@@ -266,59 +266,141 @@ const fireBpHelp = React.useCallback(
       )}
 
       {/* Headerr */}
-      <header className="bg-gray-800 shadow-md rounded-lg p-4 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Espace client</h1>
-          <p className="text-gray-400 text-sm">
-            {user?.email} • plan <strong>{user?.plan}</strong> • crédits <strong>{credits}</strong>
-          </p>
-        </div>
-        <div className="flex gap-2">
+      <header className="bg-gray-800 shadow-md rounded-lg p-4">
+        <div className="flex items-center justify-between gap-3">
+          {/* Bloc titre + user (prend la largeur dispo, coupe si long) */}
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold truncate">Espace client</h1>
+            <p className="text-gray-400 text-sm break-all">
+              {user?.email} • plan <strong>{user?.plan}</strong> • crédits <strong>{credits}</strong>
+            </p>
+          </div>
 
-          {user?.is_admin && (
+          {/* Bouton hamburger (mobile) */}
+          <div className="md:hidden">
             <button
-              onClick={() => navigate('/admin')}
-              className="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-white text-sm"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="p-2 rounded bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring focus:ring-gray-500"
+              aria-label="Ouvrir le menu"
             >
-              Admin
+              {menuOpen ? (
+                // icône X
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 6l12 12M6 18L18 6" />
+                </svg>
+              ) : (
+                // icône hamburger
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
             </button>
-          )}
+          </div>
 
-          {(user?.plan === "infinity" || user?.plan === "startnow") && (
+          {/* Actions (desktop) */}
+          <div className="hidden md:flex flex-wrap gap-2 shrink-0">
+            {user?.is_admin && (
+              <button
+                onClick={() => { setMenuOpen(false); navigate('/admin') }}
+                className="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-white text-sm"
+              >
+                Admin
+              </button>
+            )}
+
+            {(user?.plan === "infinity" || user?.plan === "startnow") && (
+              <button
+                onClick={() => { setMenuOpen(false); handleOpenPortal() }}
+                className="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded text-white text-sm"
+              >
+                Gérer mon abonnement
+              </button>
+            )}
+
+            {(isInfinity || user?.plan === 'startnow') && (
+              <button
+                onClick={() => { setMenuOpen(false); navigate('/') }}
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm"
+              >
+                Générer idée
+              </button>
+            )}
+
             <button
-              onClick={handleOpenPortal}
-              className="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded text-white text-sm"
+              onClick={() => { setMenuOpen(false); handleBuyCredits() }}
+              className="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-gray-900 text-sm"
             >
-              Gérer mon abonnement
+              Racheter jetons
             </button>
-          )}
-          {(isInfinity || user?.plan === 'startnow') && (
+
             <button
-              onClick={() => navigate('/')}
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm"
+              onClick={() => { setMenuOpen(false); navigate('/settings') }}
+              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
             >
-              Générer idée
+              Settings
             </button>
-          )}
-          <button
-            onClick={handleBuyCredits}
-            className="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-gray-900 text-sm"
-          >
-            Racheter jetons
-          </button>
-          <button
-            onClick={() => navigate('/settings')}
-            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
-          >
-            Settings
-          </button>
-          <button
-            onClick={() => { logout(); navigate('/login') }}
-            className="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-white text-sm"
-          >
-            Déconnexion
-          </button>
+
+            <button
+              onClick={() => { setMenuOpen(false); logout(); navigate('/login') }}
+              className="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-white text-sm"
+            >
+              Déconnexion
+            </button>
+          </div>
         </div>
+
+        {/* Actions (mobile menu déroulant) */}
+        {menuOpen && (
+          <div className="mt-3 grid grid-cols-2 gap-2 md:hidden">
+            {user?.is_admin && (
+              <button
+                onClick={() => { setMenuOpen(false); navigate('/admin') }}
+                className="w-full px-3 py-2 bg-purple-700 hover:bg-purple-600 rounded text-white text-sm"
+              >
+                Admin
+              </button>
+            )}
+
+            {(user?.plan === "infinity" || user?.plan === "startnow") && (
+              <button
+                onClick={() => { setMenuOpen(false); handleOpenPortal() }}
+                className="w-full px-3 py-2 bg-teal-600 hover:bg-teal-500 rounded text-white text-sm col-span-2"
+              >
+                Gérer mon abonnement
+              </button>
+            )}
+
+            {(isInfinity || user?.plan === 'startnow') && (
+              <button
+                onClick={() => { setMenuOpen(false); navigate('/') }}
+                className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm"
+              >
+                Générer idée
+              </button>
+            )}
+
+            <button
+              onClick={() => { setMenuOpen(false); handleBuyCredits() }}
+              className="w-full px-3 py-2 bg-yellow-600 hover:bg-yellow-500 rounded text-gray-900 text-sm"
+            >
+              Racheter jetons
+            </button>
+
+            <button
+              onClick={() => { setMenuOpen(false); navigate('/settings') }}
+              className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
+            >
+              Settings
+            </button>
+
+            <button
+              onClick={() => { setMenuOpen(false); logout(); navigate('/login') }}
+              className="w-full px-3 py-2 bg-red-600 hover:bg-red-500 rounded text-white text-sm col-span-2"
+            >
+              Déconnexion
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Idées & Formulaire */}
