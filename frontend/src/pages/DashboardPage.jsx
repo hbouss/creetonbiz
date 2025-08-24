@@ -49,7 +49,25 @@ export default function DashboardPage() {
   // Liens visuels & spinner
   const [convertingIdeaId, setConvertingIdeaId] = useState(null)     // idée en conversion
   const [generatingProjectId, setGeneratingProjectId] = useState(null) // projet en génération
-  const [progressStep, setProgressStep] = useState(null)             // étape courante
+  const [progressStep, setProgressStep] = useState(null)// étape courante
+
+  // Styles communs aux boutons (mobile & desktop)
+  const btnBase =
+    "rounded-xl text-sm font-medium flex items-center justify-center " +
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 " +
+    "transition";
+
+  const btnMobile = "w-full h-12";     // 48px — cible tactile confortable
+  const btnDesktop = "h-10 px-3";      // plus compact en desktop
+
+  const variants = {
+    admin:    "bg-purple-700 hover:bg-purple-600 text-white",
+    portal:   "bg-teal-600 hover:bg-teal-500 text-white",
+    idea:     "bg-blue-600 hover:bg-blue-500 text-white",
+    credits:  "bg-yellow-500 hover:bg-yellow-400 text-gray-900",
+    settings: "bg-indigo-600 hover:bg-indigo-500 text-white",
+    logout:   "bg-red-600 hover:bg-red-500 text-white",
+  };
 
   // refs pour scroller vers un projet
   const projectRefs = useRef({})
@@ -301,8 +319,8 @@ const fireBpHelp = React.useCallback(
           <div className="hidden md:flex flex-wrap gap-2 shrink-0">
             {user?.is_admin && (
               <button
-                onClick={() => { setMenuOpen(false); navigate('/admin') }}
-                className="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-white text-sm"
+                onClick={() => navigate('/admin')}
+                className={`${btnBase} ${btnDesktop} ${variants.admin}`}
               >
                 Admin
               </button>
@@ -310,8 +328,8 @@ const fireBpHelp = React.useCallback(
 
             {(user?.plan === "infinity" || user?.plan === "startnow") && (
               <button
-                onClick={() => { setMenuOpen(false); handleOpenPortal() }}
-                className="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded text-white text-sm"
+                onClick={handleOpenPortal}
+                className={`${btnBase} ${btnDesktop} ${variants.portal}`}
               >
                 Gérer mon abonnement
               </button>
@@ -319,30 +337,30 @@ const fireBpHelp = React.useCallback(
 
             {(isInfinity || user?.plan === 'startnow') && (
               <button
-                onClick={() => { setMenuOpen(false); navigate('/') }}
-                className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm"
+                onClick={() => navigate('/')}
+                className={`${btnBase} ${btnDesktop} ${variants.idea}`}
               >
                 Générer idée
               </button>
             )}
 
             <button
-              onClick={() => { setMenuOpen(false); handleBuyCredits() }}
-              className="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-gray-900 text-sm"
+              onClick={handleBuyCredits}
+              className={`${btnBase} ${btnDesktop} ${variants.credits}`}
             >
               Racheter jetons
             </button>
 
             <button
-              onClick={() => { setMenuOpen(false); navigate('/settings') }}
-              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
+              onClick={() => navigate('/settings')}
+              className={`${btnBase} ${btnDesktop} ${variants.settings}`}
             >
               Settings
             </button>
 
             <button
-              onClick={() => { setMenuOpen(false); logout(); navigate('/login') }}
-              className="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-white text-sm"
+              onClick={() => { logout(); navigate('/login') }}
+              className={`${btnBase} ${btnDesktop} ${variants.logout}`}
             >
               Déconnexion
             </button>
@@ -351,11 +369,11 @@ const fireBpHelp = React.useCallback(
 
         {/* Actions (mobile menu déroulant) */}
         {menuOpen && (
-          <div className="mt-3 grid grid-cols-2 gap-2 md:hidden">
+          <div className="mt-3 grid grid-cols-2 gap-3 md:hidden">
             {user?.is_admin && (
               <button
                 onClick={() => { setMenuOpen(false); navigate('/admin') }}
-                className="w-full px-3 py-2 bg-purple-700 hover:bg-purple-600 rounded text-white text-sm"
+                className={`${btnBase} ${btnMobile} ${variants.admin}`}
               >
                 Admin
               </button>
@@ -364,16 +382,18 @@ const fireBpHelp = React.useCallback(
             {(user?.plan === "infinity" || user?.plan === "startnow") && (
               <button
                 onClick={() => { setMenuOpen(false); handleOpenPortal() }}
-                className="w-full px-3 py-2 bg-teal-600 hover:bg-teal-500 rounded text-white text-sm col-span-2"
+                className={`${btnBase} ${btnMobile} ${variants.portal} col-span-2`}
               >
-                Gérer mon abonnement
+                {/* libellé court en <640px, long au-dessus */}
+                <span className="sm:hidden">Abonnement</span>
+                <span className="hidden sm:inline">Gérer mon abonnement</span>
               </button>
             )}
 
             {(isInfinity || user?.plan === 'startnow') && (
               <button
                 onClick={() => { setMenuOpen(false); navigate('/') }}
-                className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm"
+                className={`${btnBase} ${btnMobile} ${variants.idea}`}
               >
                 Générer idée
               </button>
@@ -381,21 +401,21 @@ const fireBpHelp = React.useCallback(
 
             <button
               onClick={() => { setMenuOpen(false); handleBuyCredits() }}
-              className="w-full px-3 py-2 bg-yellow-600 hover:bg-yellow-500 rounded text-gray-900 text-sm"
+              className={`${btnBase} ${btnMobile} ${variants.credits}`}
             >
-              Racheter jetons
+              Jetons
             </button>
 
             <button
               onClick={() => { setMenuOpen(false); navigate('/settings') }}
-              className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
+              className={`${btnBase} ${btnMobile} ${variants.settings}`}
             >
               Settings
             </button>
 
             <button
               onClick={() => { setMenuOpen(false); logout(); navigate('/login') }}
-              className="w-full px-3 py-2 bg-red-600 hover:bg-red-500 rounded text-white text-sm col-span-2"
+              className={`${btnBase} ${btnMobile} ${variants.logout} col-span-2`}
             >
               Déconnexion
             </button>
