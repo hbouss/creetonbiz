@@ -14,7 +14,7 @@ import {
   deleteIdea,
   deleteProject,
   publishLanding,
-  openBillingPortal, goToBillingPortal,
+  openBillingPortal,
 } from '../api.js'
 import LandingHelp from "../components/LandingHelpRaw.jsx";
 import BusinessPlanHelp from "../components/BusinessPlanHelp.jsx"; // adapte le chemin
@@ -284,144 +284,95 @@ const fireBpHelp = React.useCallback(
       )}
 
       {/* Headerr */}
-      <header className="bg-gray-800 shadow-md rounded-lg p-4">
-        <div className="flex items-center justify-between gap-3">
-          {/* Bloc titre + user (prend la largeur dispo, coupe si long) */}
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold truncate">Espace client</h1>
-            <p className="text-gray-400 text-sm break-all">
-              {user?.email} • plan <strong>{user?.plan}</strong> • crédits <strong>{credits}</strong>
-            </p>
-          </div>
+      <header className="bg-gray-800 shadow-md rounded-lg p-4 flex justify-between items-center">
+  <div>
+    <h1 className="text-2xl font-bold">Espace client</h1>
+    <p className="text-gray-400 text-sm">
+      {user?.email} • plan <strong>{user?.plan}</strong> • crédits <strong>{credits}</strong>
+    </p>
+  </div>
 
-          {/* Bouton hamburger (mobile) */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="p-2 rounded bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring focus:ring-gray-500"
-              aria-label="Ouvrir le menu"
-            >
-              {menuOpen ? (
-                // icône X
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 6l12 12M6 18L18 6" />
-                </svg>
-              ) : (
-                // icône hamburger
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          </div>
+  {/* ACTIONS DESKTOP SEULEMENT */}
+  <div className="hidden md:flex flex-wrap gap-2">
+    {(user?.plan === "infinity" || user?.plan === "startnow") && (
+      <button
+        onClick={handleOpenPortal}
+        className="h-10 px-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium"
+      >
+        Gérer mon abonnement
+      </button>
+    )}
+    {(isInfinity || user?.plan === 'startnow') && (
+      <button
+        onClick={() => navigate('/')}
+        className="h-10 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"
+      >
+        Générer idée
+      </button>
+    )}
+    <button
+      onClick={handleBuyCredits}
+      className="h-10 px-3 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-gray-900 text-sm font-medium"
+    >
+      Racheter jetons
+    </button>
+    <button
+      onClick={() => navigate('/settings')}
+      className="h-10 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium"
+    >
+      Settings
+    </button>
+    <button
+      onClick={() => { logout(); navigate('/login') }}
+      className="h-10 px-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium"
+    >
+      Déconnexion
+    </button>
+  </div>
+</header>
 
-          {/* Actions (desktop) */}
-          <div className="hidden md:flex flex-wrap gap-2 shrink-0">
-            {user?.is_admin && (
-              <button
-                onClick={() => navigate('/admin')}
-                className={`${btnBase} ${btnDesktop} ${variants.admin}`}
-              >
-                Admin
-              </button>
-            )}
+      {/* ACTIONS MOBILE UNIQUEMENT – 5 boutons identiques */}
+<div className="md:hidden mt-3 grid grid-cols-1 gap-3">
+  {(user?.plan === "infinity" || user?.plan === "startnow") && (
+    <button
+      onClick={handleOpenPortal}
+      className="w-full h-12 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium"
+    >
+      {/* libellé court en mobile pour éviter de forcer une largeur différente */}
+      Abonnement
+    </button>
+  )}
 
-            {(user?.plan === "infinity" || user?.plan === "startnow") && (
-              <button
-                onClick={handleOpenPortal}
-                className={`${btnBase} ${btnDesktop} ${variants.portal}`}
-              >
-                Gérer mon abonnement
-              </button>
-            )}
+  {(isInfinity || user?.plan === 'startnow') && (
+    <button
+      onClick={() => navigate('/')}
+      className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"
+    >
+      Générer idée
+    </button>
+  )}
 
-            {(isInfinity || user?.plan === 'startnow') && (
-              <button
-                onClick={() => navigate('/')}
-                className={`${btnBase} ${btnDesktop} ${variants.idea}`}
-              >
-                Générer idée
-              </button>
-            )}
+  <button
+    onClick={handleBuyCredits}
+    className="w-full h-12 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-gray-900 text-sm font-medium"
+  >
+    Racheter jetons
+  </button>
 
-            <button
-              onClick={handleBuyCredits}
-              className={`${btnBase} ${btnDesktop} ${variants.credits}`}
-            >
-              Racheter jetons
-            </button>
+  <button
+    onClick={() => navigate('/settings')}
+    className="w-full h-12 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium"
+  >
+    Settings
+  </button>
 
-            <button
-              onClick={() => navigate('/settings')}
-              className={`${btnBase} ${btnDesktop} ${variants.settings}`}
-            >
-              Settings
-            </button>
-
-            <button
-              onClick={() => { logout(); navigate('/login') }}
-              className={`${btnBase} ${btnDesktop} ${variants.logout}`}
-            >
-              Déconnexion
-            </button>
-          </div>
-        </div>
-
-        {/* Actions (mobile menu déroulant) */}
-        {menuOpen && (
-          <div className="mt-3 grid grid-cols-2 gap-3 md:hidden">
-            {user?.is_admin && (
-              <button
-                onClick={() => { setMenuOpen(false); navigate('/admin') }}
-                className={`${btnBase} ${btnMobile} ${variants.admin}`}
-              >
-                Admin
-              </button>
-            )}
-
-            {(user?.plan === "infinity" || user?.plan === "startnow") && (
-              <button
-                onClick={() => { setMenuOpen(false); handleOpenPortal() }}
-                className={`${btnBase} ${btnMobile} ${variants.portal} col-span-2`}
-              >
-                {/* libellé court en <640px, long au-dessus */}
-                <span className="sm:hidden">Abonnement</span>
-                <span className="hidden sm:inline">Gérer mon abonnement</span>
-              </button>
-            )}
-
-            {(isInfinity || user?.plan === 'startnow') && (
-              <button
-                onClick={() => { setMenuOpen(false); navigate('/') }}
-                className={`${btnBase} ${btnMobile} ${variants.idea}`}
-              >
-                Générer idée
-              </button>
-            )}
-
-            <button
-              onClick={() => { setMenuOpen(false); handleBuyCredits() }}
-              className={`${btnBase} ${btnMobile} ${variants.credits}`}
-            >
-              Jetons
-            </button>
-
-            <button
-              onClick={() => { setMenuOpen(false); navigate('/settings') }}
-              className={`${btnBase} ${btnMobile} ${variants.settings}`}
-            >
-              Settings
-            </button>
-
-            <button
-              onClick={() => { setMenuOpen(false); logout(); navigate('/login') }}
-              className={`${btnBase} ${btnMobile} ${variants.logout} col-span-2`}
-            >
-              Déconnexion
-            </button>
-          </div>
-        )}
-      </header>
+  <button
+    onClick={() => { logout(); navigate('/login') }}
+    className="w-full h-12 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium"
+  >
+    Déconnexion
+  </button>
+</div>
 
       {/* Idées & Formulaire */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
