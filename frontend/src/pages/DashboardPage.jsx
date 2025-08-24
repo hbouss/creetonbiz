@@ -14,7 +14,7 @@ import {
   deleteIdea,
   deleteProject,
   publishLanding,
-  openPlanICS, openBillingPortal
+  openBillingPortal,
 } from '../api.js'
 import LandingHelp from "../components/LandingHelpRaw.jsx";
 import BusinessPlanHelp from "../components/BusinessPlanHelp.jsx"; // adapte le chemin
@@ -189,6 +189,15 @@ export default function DashboardPage() {
     }
   }
 
+async function handleOpenPortal() {
+  try {
+    const { url } = await openBillingPortal();
+    window.location.href = url; // redirection vers Stripe
+  } catch (e) {
+    setError(e.message || "Impossible d’ouvrir le portail de facturation.");
+  }
+}
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (credits <= 0) { setError('Aucun crédit disponible.'); return }
@@ -286,11 +295,11 @@ const fireBpHelp = React.useCallback(
 
           {(user?.plan === "infinity" || user?.plan === "startnow") && (
             <button
-              onClick={handleManageSubscription}
-              className="px-3 py-1 bg-amber-600 hover:bg-amber-500 rounded text-gray-900 text-sm"
-            >
-              Gérer mon abonnement
-            </button>
+            onClick={handleOpenPortal}
+            className="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded text-white text-sm"
+          >
+            Gérer mon abonnement
+          </button>
           )}
           {(isInfinity || user?.plan === 'startnow') && (
             <button
