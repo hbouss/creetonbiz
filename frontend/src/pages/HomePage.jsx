@@ -16,9 +16,6 @@ export default function HomePage() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [showOffers, setShowOffers] = useState(false);
-  const [offersDismissed, setOffersDismissed] = useState(
-  () => sessionStorage.getItem("ctb_offers_dismissed") === "1"
-);
 
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -39,14 +36,8 @@ export default function HomePage() {
 
   // Ouvre le popup si l’utilisateur est sur un plan free
   useEffect(() => {
-  if (user?.plan === "free" && !offersDismissed) setShowOffers(true);
-  }, [user, offersDismissed]);
-
-  const closeOffers = () => {
-    setShowOffers(false);
-    setOffersDismissed(true);
-    sessionStorage.setItem("ctb_offers_dismissed", "1");
-  };
+    if (user?.plan === "free") setShowOffers(true);
+  }, [user]);
 
   const handleGenerate = async (profil) => {
     setError(null);
@@ -105,9 +96,9 @@ export default function HomePage() {
       {/* ⬇️ Popup d’offres */}
       <OffersModal
         open={showOffers}
-        onClose={closeOffers}
-        onBuyInfinity={BuyInfinity}
-        onBuyStartNow={BuyStartNow}
+        onClose={() => setShowOffers(false)}
+        onBuyInfinity={buyInfinity}
+        onBuyStartNow={buyStartNow}
       />
     </div>
   );

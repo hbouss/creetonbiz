@@ -33,9 +33,6 @@ export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState({ open: false, projectId: null, deliverable: null });
   const [showOffers, setShowOffers] = useState(false);
-  const [offersDismissed, setOffersDismissed] = useState(
-  () => sessionStorage.getItem("ctb_offers_dismissed") === "1"
-);
 
   // data state
   const [ideas, setIdeas] = useState([]);
@@ -116,17 +113,11 @@ export default function DashboardPage() {
 
   // 👉 Ouvre automatiquement les offres si pas d’offre/plus de crédits
   useEffect(() => {
-  if (!user) return;
-  const noOffer = user.plan === "free";
-  const outOfCredits = user.plan === "startnow" && (user.startnow_credits ?? 0) <= 0;
-  if ((noOffer || outOfCredits) && !offersDismissed) setShowOffers(true);
-}, [user, offersDismissed]);
-
-  const closeOffers = () => {
-    setShowOffers(false);
-    setOffersDismissed(true);
-    sessionStorage.setItem("ctb_offers_dismissed", "1");
-  };
+    if (!user) return;
+    const noOffer = user.plan === "free";
+    const outOfCredits = user.plan === "startnow" && (user.startnow_credits ?? 0) <= 0;
+    if (noOffer || outOfCredits) setShowOffers(true);
+  }, [user]);
 
   async function fetchIdeas() {
     try {
@@ -813,7 +804,7 @@ export default function DashboardPage() {
       {/* ⬇️ Popup d’offres */}
       <OffersModal
         open={showOffers}
-        onClose={closeOffers}
+        onClose={() => setShowOffers(false)}
         onBuyInfinity={handleBuyInfinity}
         onBuyStartNow={handleBuyStartNow}
       />
