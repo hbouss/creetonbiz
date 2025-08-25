@@ -43,6 +43,13 @@ export default function DashboardPage() {
   const [convertingIdeaId, setConvertingIdeaId] = useState(null);
   const [generatingProjectId, setGeneratingProjectId] = useState(null);
   const [progressStep, setProgressStep] = useState(null);
+  // … autres useState …
+const [form, setForm] = useState({
+  title: '',
+  secteur: '',
+  objectif: '',
+  competences: '',
+});
 
   const projectRefs = useRef({});
   const scrollToProject = (projectId) => {
@@ -52,6 +59,68 @@ export default function DashboardPage() {
 
   const credits = user?.startnow_credits ?? 0;
   const isInfinity = user?.plan === "infinity";
+
+  const wakeLockRef = React.useRef(null);
+  const visibilityHandlerRef = React.useRef(null);
+
+  const canWakeLock = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
+
+  const requestWakeLock = React.useCallback(async () => {
+    if (!canWakeLock) return;
+
+    try {
+      // Évite les doublons
+      if (wakeLockRef.current && !wakeLockRef.current.released) return;
+
+      const sentinel = await navigator.wakeLock.request('screen');
+      wakeLockRef.current = sentinel;
+
+      // Ré-acquérir si le lock est relâché
+      sentinel.addEventListener('release', () => {
+        // Optionnel: console.log('Wake Lock libéré par le navigateur');
+      });
+
+      // Re-demande quand l’onglet redevient visible (certains navigateurs relâchent le lock)
+      if (!visibilityHandlerRef.current) {
+        visibilityHandlerRef.current = async () => {
+          if (document.visibilityState === 'visible') {
+            try {
+              if (!wakeLockRef.current || wakeLockRef.current.released) {
+                wakeLockRef.current = await navigator.wakeLock.request('screen');
+              }
+            } catch (_) {}
+          }
+        };
+        document.addEventListener('visibilitychange', visibilityHandlerRef.current);
+      }
+    } catch (e) {
+      // API non supportée / permissions / pas d’interaction utilisateur récente
+      // On ne bloque rien, on continue sans wake lock.
+      // console.warn('WakeLock indisponible:', e);
+    }
+  }, [canWakeLock]);
+
+  const releaseWakeLock = React.useCallback(async () => {
+    try {
+      if (wakeLockRef.current && !wakeLockRef.current.released) {
+        await wakeLockRef.current.release();
+      }
+    } catch (_) {
+    } finally {
+      wakeLockRef.current = null;
+    }
+  }, []);
+
+  // Nettoyage en unmount
+  React.useEffect(() => {
+    return () => {
+      releaseWakeLock();
+      if (visibilityHandlerRef.current) {
+        document.removeEventListener('visibilitychange', visibilityHandlerRef.current);
+        visibilityHandlerRef.current = null;
+      }
+    };
+  }, [releaseWakeLock]);
 
   useEffect(() => {
     (async () => {
@@ -93,6 +162,9 @@ export default function DashboardPage() {
     }
     setConvertingIdeaId(idea.id);
     setLoading(true);
+    // 👉 Empêche la mise en veille pendant toute la génération
+    await requestWakeLock();
+
     try {
       const projectBody = {
         title: idea.nom,
@@ -122,8 +194,57 @@ export default function DashboardPage() {
       setGeneratingProjectId(null);
       setProgressStep(null);
       setLoading(false);
+
+      // 👉 Libère le wake lock quand tout est fini
+      await releaseWakeLock();
     }
   }
+
+  async function handleSubmit(e) {
+  e.preventDefault();
+  if (credits <= 0) { setError('Aucun crédit disponible.'); return; }
+
+  const { title, secteur, objectif, competences } = form;
+  if (!secteur.trim() || !objectif.trim()) {
+    setError('Secteur et objectif obligatoires.');
+    return;
+  }
+
+  setError('');
+  setLoading(true);
+
+  // Empêche la mise en veille pendant toute la génération
+  await requestWakeLock();
+
+  try {
+    const body = {
+      title: title.trim() || 'Mon projet',
+      secteur: secteur.trim(),
+      objectif: objectif.trim(),
+      competences: competences.split(',').map(s => s.trim()).filter(Boolean),
+    };
+
+    const { id: projectId } = await createProject(body);
+
+    setGeneratingProjectId(projectId);
+    setProgressStep('offer');
+
+    await refreshMe();
+    await generateAllPremium(body, projectId, (step) => setProgressStep(step));
+    await fetchProjects();
+    setForm({ title: '', secteur: '', objectif: '', competences: '' });
+
+    setTimeout(() => scrollToProject(projectId), 250);
+  } catch (e) {
+    setError(e.message);
+  } finally {
+    setGeneratingProjectId(null);
+    setProgressStep(null);
+    setLoading(false);
+    // Libère le Wake Lock quand tout est fini
+    await releaseWakeLock();
+  }
+}
 
   async function handleDeleteIdea(id) {
     if (!window.confirm("Supprimer cette idée ?")) return;
@@ -574,6 +695,47 @@ export default function DashboardPage() {
               );
             })
           )}
+          <section className="bg-gray-800 rounded-xl p-5 space-y-4">
+            <h2 className="text-xl font-semibold">Créer un projet</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input
+                className="w-full p-3 rounded-lg bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Nom du projet"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+              <input
+                className="w-full p-3 rounded-lg bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Secteur"
+                value={form.secteur}
+                onChange={(e) => setForm({ ...form, secteur: e.target.value })}
+              />
+              <input
+                className="w-full p-3 rounded-lg bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Objectif"
+                value={form.objectif}
+                onChange={(e) => setForm({ ...form, objectif: e.target.value })}
+              />
+              <input
+                className="w-full p-3 rounded-lg bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Compétences (séparées par des virgules)"
+                value={form.competences}
+                onChange={(e) => setForm({ ...form, competences: e.target.value })}
+              />
+              <button
+                type="submit"
+                disabled={loading || credits <= 0}
+                className={`w-full h-12 rounded-xl text-white font-medium ${
+                  loading || credits <= 0
+                    ? 'bg-gray-600 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-500'
+                }`}
+              >
+                {loading ? 'Génération en cours…' : 'Créer & générer'}
+              </button>
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+            </form>
+          </section>
         </section>
 
         {/* Projets */}
