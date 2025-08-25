@@ -1,19 +1,24 @@
-export default function Loader() {
+// src/components/Loader.jsx
+import React from "react";
+
+export default function Loader({ text = "Génération en cours…" }) {
   return (
-    <div className="flex flex-col items-center space-y-4">
-      <svg
-        className="animate-spin h-10 w-10 text-indigo-500"
-        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm">
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        /* safe-area iOS pour éviter que ça colle en haut */
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
       >
-        <circle
-          className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"
-        />
-        <path
-          className="opacity-75" fill="currentColor"
-          d="M4 12a8 8 0 018-8v8z"
-        />
-      </svg>
-      <p>Génération en cours…</p>
+        <div className="bg-gray-800/85 rounded-2xl p-6 shadow-xl text-center">
+          <div className="mx-auto mb-3 h-12 w-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+          <p className="text-sm text-gray-100">{text}</p>
+        </div>
+      </div>
     </div>
   );
 }

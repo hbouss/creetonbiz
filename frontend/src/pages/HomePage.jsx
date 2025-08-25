@@ -1,5 +1,5 @@
 // src/pages/HomePage.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { generateIdea } from "../api";
 import IdeaForm from "../components/IdeaForm";
@@ -11,6 +11,23 @@ export default function HomePage() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const navigate = useNavigate();
+
+  // 🔒 Empêche le scroll derrière l'overlay pendant le chargement (UX mobile)
+  useEffect(() => {
+    if (step === "loading") {
+      const prevOverflow = document.body.style.overflow;
+      const prevDocHeight = document.documentElement.style.height;
+
+      document.body.style.overflow = "hidden";
+      // corrige le bug 100vh sur iOS (barres d'adresse)
+      document.documentElement.style.height = "100dvh";
+
+      return () => {
+        document.body.style.overflow = prevOverflow;
+        document.documentElement.style.height = prevDocHeight;
+      };
+    }
+  }, [step]);
 
   const handleGenerate = async (profil) => {
     setError(null);
@@ -37,11 +54,14 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
-        {step === "home" && <IdeaForm onSubmit={handleGenerate} error={error} />}
-        {step === "loading" && <Loader />}
-        {step === "result" && result && (
-          <div className="flex-1 mx-auto max-w-screen-sm px-4 py-6 space-y-6 text-center">
+    <div className="min-h-[100dvh] bg-gray-900 text-gray-100 flex flex-col">
+      {step === "home" && <IdeaForm onSubmit={handleGenerate} error={error} />}
+
+      {/* Overlay centré plein écran */}
+      {step === "loading" && <Loader />}
+
+      {step === "result" && result && (
+        <div className="flex-1 mx-auto max-w-screen-sm px-4 py-6 space-y-6 text-center">
           <Result data={result} onReset={() => setStep("home")} />
           <button
             onClick={() => navigate('/premium', { state: { idea: result } })}
