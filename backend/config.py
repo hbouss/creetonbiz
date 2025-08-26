@@ -31,7 +31,7 @@ class Settings:
     STRIPE_PRICE_ID_STARTNOW_ONE_TIME: str = os.getenv("STRIPE_PRICE_ID_STARTNOW_ONE_TIME", "")
 
     # Frontend
-    FRONTEND_BASE_URL: str = os.getenv("FRONTEND_BASE_URL", "https://creetonbiz.netlify.app")
+    FRONTEND_BASE_URL: str = os.getenv("FRONTEND_BASE_URL", "https://creertonbiz.com")
 
     # (optionnel, si tu publies les landings en statique)
     PUBLIC_WEB_ROOT: str = os.getenv("PUBLIC_WEB_ROOT", "")
