@@ -1,4 +1,3 @@
-// components/OfferHelp.jsx
 "use client";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -21,7 +20,15 @@ export default function OfferHelp() {
 
   const close = useCallback(() => setIsOpen(false), []);
 
-  // ESC pour fermer
+  // ✨ Fermer avec la croix = exécuter le callback, puis fermer
+  const closeAndRun = useCallback(() => {
+    const fn = afterRef.current;
+    afterRef.current = null;
+    try { if (typeof fn === "function") fn(); } catch {}
+    setIsOpen(false);
+  }, []);
+
+  // ESC pour fermer (sans download)
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e) => { if (e.key === "Escape") close(); };
@@ -57,7 +64,6 @@ export default function OfferHelp() {
 - Appels à l’action (démo, essai, devis)
 - Objections fréquentes + réponses
 - Next steps : comment acheter / qui contacter`;
-
     let ok = false;
     try { await navigator.clipboard.writeText(text); ok = true; } catch {}
     if (!ok) {
@@ -71,16 +77,17 @@ export default function OfferHelp() {
     if (btn) { const prev = btn.textContent; btn.textContent = "Copié ✓"; setTimeout(() => { btn.textContent = prev || "Copier la checklist"; }, 1500); }
   };
 
+  // "J’ai compris" = exécuter le callback puis fermer
   const proceedAndClose = () => {
     const fn = afterRef.current;
     afterRef.current = null;
     try { if (typeof fn === "function") fn(); } catch {}
-    close();
+    setIsOpen(false);
   };
 
   return createPortal(
     <>
-      {/* Overlay */}
+      {/* Overlay (ferme sans download) */}
       <div
         onClick={close}
         style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998 }}
@@ -111,7 +118,7 @@ export default function OfferHelp() {
               <div id="offer-help-sub" style={{ color: "#9ca3af", fontSize: 12 }}>{sub}</div>
             </div>
             <button
-              onClick={close}
+              onClick={closeAndRun}  {/* ✨ maintenant exécute aussi le callback */}
               aria-label="Fermer"
               style={{ background: "#0b1220", border: "1px solid #1f2937", color: "#e5e7eb",
                        borderRadius: 10, padding: "8px 10px", cursor: "pointer" }}
@@ -122,7 +129,6 @@ export default function OfferHelp() {
 
           {/* Body */}
           <div style={{ padding: "18px 20px", display: "grid", gap: 16 }}>
-            {/* Ce que contient le doc */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Ce que contient le document</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>
@@ -135,7 +141,6 @@ export default function OfferHelp() {
               </ul>
             </div>
 
-            {/* À quoi ça sert */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>À quoi ça sert</strong>
               <p style={{ marginTop: 8 }}>
@@ -144,7 +149,6 @@ export default function OfferHelp() {
               </p>
             </div>
 
-            {/* Objectif */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>L’objectif</strong>
               <p style={{ marginTop: 8 }}>
@@ -152,7 +156,6 @@ export default function OfferHelp() {
               </p>
             </div>
 
-            {/* Positionnement */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Ton positionnement</strong>
               <p style={{ marginTop: 8 }}>
@@ -161,7 +164,6 @@ export default function OfferHelp() {
               </p>
             </div>
 
-            {/* Gain */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Le “gain” pour toi</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>
@@ -171,7 +173,6 @@ export default function OfferHelp() {
               </ul>
             </div>
 
-            {/* Utilisation */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Comment t’en servir</strong>
               <ol style={{ margin: "8px 0 0 18px" }}>
@@ -183,7 +184,6 @@ export default function OfferHelp() {
               </ol>
             </div>
 
-            {/* Formats */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>PDF ou HTML ?</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>
@@ -192,7 +192,6 @@ export default function OfferHelp() {
               </ul>
             </div>
 
-            {/* Adaptations */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Ce que tu peux (et dois) adapter</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>
@@ -202,7 +201,6 @@ export default function OfferHelp() {
               </ul>
             </div>
 
-            {/* Actions */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
                 onClick={copyChecklist}

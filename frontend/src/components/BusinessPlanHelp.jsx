@@ -1,4 +1,3 @@
-// components/BusinessPlanHelp.jsx
 "use client";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -21,7 +20,15 @@ export default function BusinessPlanHelp() {
 
   const close = useCallback(() => setIsOpen(false), []);
 
-  // ESC pour fermer
+  // ✨ Fermer avec la croix = exécuter le callback, puis fermer
+  const closeAndRun = useCallback(() => {
+    const fn = afterRef.current;
+    afterRef.current = null; // éviter double exécution
+    try { if (typeof fn === "function") fn(); } catch {}
+    setIsOpen(false);
+  }, []);
+
+  // ESC pour fermer (sans download)
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e) => { if (e.key === "Escape") close(); };
@@ -29,7 +36,7 @@ export default function BusinessPlanHelp() {
     return () => document.removeEventListener("keydown", onKey);
   }, [isOpen, close]);
 
-  // Lock scroll en arrière-plan (mobile friendly)
+  // Lock scroll (mobile)
   useEffect(() => {
     if (!isOpen) return;
     const prev = document.body.style.overflow;
@@ -55,7 +62,6 @@ export default function BusinessPlanHelp() {
 - Financier : compte de résultat prévisionnel, trésorerie, besoins de financement
 - Risques : 3 risques clés + plan B
 - Annexes : devis/factures, lettres d’intention, CV, statuts (brouillon), Kbis si dispo`;
-
     let copied = false;
     try { await navigator.clipboard.writeText(text); copied = true; } catch {}
     if (!copied) {
@@ -69,17 +75,17 @@ export default function BusinessPlanHelp() {
     if (btn) { const prev = btn.textContent; btn.textContent = "Copié ✓"; setTimeout(() => { btn.textContent = prev || "Copier la checklist"; }, 1500); }
   };
 
-  // Valider = exécuter le callback (si fourni) puis fermer
+  // "J'ai compris" = exécuter le callback puis fermer
   const proceedAndClose = () => {
     const fn = afterRef.current;
-    afterRef.current = null; // évite double appel
+    afterRef.current = null;
     try { if (typeof fn === "function") fn(); } catch {}
-    close();
+    setIsOpen(false);
   };
 
   return createPortal(
     <>
-      {/* Overlay */}
+      {/* Overlay (ferme sans download) */}
       <div
         onClick={close}
         style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998 }}
@@ -110,7 +116,7 @@ export default function BusinessPlanHelp() {
               <div id="bp-help-sub" style={{ color: "#9ca3af", fontSize: 12 }}>{sub}</div>
             </div>
             <button
-              onClick={close}
+              onClick={closeAndRun}  {/* ✨ maintenant exécute aussi le callback */}
               aria-label="Fermer"
               style={{ background: "#0b1220", border: "1px solid #1f2937", color: "#e5e7eb",
                        borderRadius: 10, padding: "8px 10px", cursor: "pointer" }}
