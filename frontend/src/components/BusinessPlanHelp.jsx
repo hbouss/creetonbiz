@@ -19,15 +19,15 @@ export default function BusinessPlanHelp() {
     return () => window.removeEventListener("bp-help:open", onOpen);
   }, []);
 
-  const close = useCallback(() => setIsOpen(false), []);
+  const closeOnly = useCallback(() => setIsOpen(false), []);
 
-  // ESC pour fermer
+  // ESC pour fermer (sans télécharger)
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e) => { if (e.key === "Escape") close(); };
+    const onKey = (e) => { if (e.key === "Escape") closeOnly(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [isOpen, close]);
+  }, [isOpen, closeOnly]);
 
   // Lock scroll en arrière-plan (mobile friendly)
   useEffect(() => {
@@ -69,19 +69,19 @@ export default function BusinessPlanHelp() {
     if (btn) { const prev = btn.textContent; btn.textContent = "Copié ✓"; setTimeout(() => { btn.textContent = prev || "Copier la checklist"; }, 1500); }
   };
 
-  // Valider = exécuter le callback (si fourni) puis fermer
+  // ✅ Lance le callback de téléchargement puis ferme
   const proceedAndClose = () => {
     const fn = afterRef.current;
     afterRef.current = null; // évite double appel
     try { if (typeof fn === "function") fn(); } catch {}
-    close();
+    setIsOpen(false);
   };
 
   return createPortal(
     <>
-      {/* Overlay */}
+      {/* Overlay (ferme sans télécharger) */}
       <div
-        onClick={close}
+        onClick={closeOnly}
         style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998 }}
       />
 
@@ -109,8 +109,9 @@ export default function BusinessPlanHelp() {
               <div id="bp-help-title" style={{ fontWeight: 800, fontSize: 18 }}>{title}</div>
               <div id="bp-help-sub" style={{ color: "#9ca3af", fontSize: 12 }}>{sub}</div>
             </div>
+            {/* ✅ La croix déclenche aussi le téléchargement */}
             <button
-              onClick={close}
+              onClick={proceedAndClose}
               aria-label="Fermer"
               style={{ background: "#0b1220", border: "1px solid #1f2937", color: "#e5e7eb",
                        borderRadius: 10, padding: "8px 10px", cursor: "pointer" }}
