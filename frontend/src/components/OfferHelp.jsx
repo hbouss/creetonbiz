@@ -5,12 +5,14 @@ import { createPortal } from "react-dom";
 
 export default function OfferHelp() {
   const [isOpen, setIsOpen] = useState(false);
-  const kindRef = useRef("pdf"); // "pdf" | "html"
+  const kindRef  = useRef("pdf");   // "pdf" | "html"
+  const afterRef = useRef(null);     // callback
 
   // Ouvre le modal via un CustomEvent
   useEffect(() => {
     const onOpen = (e) => {
-      kindRef.current = (e.detail && e.detail.kind) || "pdf";
+      kindRef.current  = (e.detail && e.detail.kind) || "pdf";
+      afterRef.current = (e.detail && e.detail.after) || null;
       setIsOpen(true);
     };
     window.addEventListener("offer-help:open", onOpen);
@@ -26,6 +28,14 @@ export default function OfferHelp() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [isOpen, close]);
+
+  // Lock scroll (mobile)
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -49,26 +59,23 @@ export default function OfferHelp() {
 - Next steps : comment acheter / qui contacter`;
 
     let ok = false;
-    try {
-      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); ok = true; }
-    } catch {}
+    try { await navigator.clipboard.writeText(text); ok = true; } catch {}
     if (!ok) {
       const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
+      ta.value = text; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
       try { document.execCommand("copy"); } catch {}
       document.body.removeChild(ta);
     }
     const btn = document.getElementById("offer-help-copy");
-    if (btn) {
-      const prev = btn.textContent;
-      btn.textContent = "Copié ✓";
-      setTimeout(() => { btn.textContent = prev || "Copier la checklist"; }, 1500);
-    }
+    if (btn) { const prev = btn.textContent; btn.textContent = "Copié ✓"; setTimeout(() => { btn.textContent = prev || "Copier la checklist"; }, 1500); }
+  };
+
+  const proceedAndClose = () => {
+    const fn = afterRef.current;
+    afterRef.current = null;
+    try { if (typeof fn === "function") fn(); } catch {}
+    close();
   };
 
   return createPortal(
@@ -115,7 +122,6 @@ export default function OfferHelp() {
 
           {/* Body */}
           <div style={{ padding: "18px 20px", display: "grid", gap: 16 }}>
-
             {/* Ce que contient le doc */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Ce que contient le document</strong>
@@ -207,7 +213,7 @@ export default function OfferHelp() {
                 Copier la checklist
               </button>
               <button
-                onClick={close}
+                onClick={proceedAndClose}
                 id="offer-help-close"
                 style={{ background: "#14b8a6", border: "none", color: "#052e2b",
                          padding: "10px 12px", borderRadius: 10, fontWeight: 800, cursor: "pointer" }}

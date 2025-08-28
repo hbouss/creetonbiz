@@ -5,27 +5,51 @@ import { createPortal } from "react-dom";
 
 export default function LandingHelp() {
   const [isOpen, setIsOpen] = useState(false);
-  const kindRef = useRef("html"); // "html" | "publish"
+  const kindRef = useRef("html");   // "html" | "publish"
+  const reqIdRef = useRef(null);    // requestId
 
   // Ouvre le modal via un CustomEvent
   useEffect(() => {
     const onOpen = (e) => {
-      kindRef.current = (e.detail && e.detail.kind) || "html";
+      kindRef.current = (e?.detail?.kind) || "html";
+      reqIdRef.current = e?.detail?.requestId ?? null;
       setIsOpen(true);
     };
     window.addEventListener("landing-help:open", onOpen);
     return () => window.removeEventListener("landing-help:open", onOpen);
   }, []);
 
-  const close = useCallback(() => setIsOpen(false), []);
-
-  // ESC pour fermer
+  // Scroll lock
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e) => { if (e.key === "Escape") close(); };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
+  const emitResolved = useCallback((action) => {
+    const detail = {
+      modal: "landing",
+      requestId: reqIdRef.current,
+      format: kindRef.current,  // "html" | "publish"
+      action,
+    };
+    window.dispatchEvent(new CustomEvent("landing-help:resolved", { detail }));
+    window.dispatchEvent(new CustomEvent("deliverable-help:resolved", { detail }));
+  }, []);
+
+  const closeWith = useCallback((action) => {
+    emitResolved(action);
+    setIsOpen(false);
+  }, [emitResolved]);
+
+  // ESC
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => { if (e.key === "Escape") closeWith("escape"); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [isOpen, close]);
+  }, [isOpen, closeWith]);
 
   if (!isOpen) return null;
 
@@ -37,10 +61,8 @@ export default function LandingHelp() {
     <>
       {/* Overlay */}
       <div
-        onClick={close}
-        style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998
-        }}
+        onClick={() => closeWith("dismiss")}
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998 }}
       />
 
       {/* Modal */}
@@ -68,7 +90,7 @@ export default function LandingHelp() {
               <div id="landing-help-sub" style={{ color: "#9ca3af", fontSize: 12 }}>{sub}</div>
             </div>
             <button
-              onClick={close}
+              onClick={() => closeWith("x")}
               aria-label="Fermer"
               style={{ background: "#0b1220", border: "1px solid #1f2937", color: "#e5e7eb",
                        borderRadius: 10, padding: "8px 10px", cursor: "pointer" }}

@@ -5,27 +5,54 @@ import { createPortal } from "react-dom";
 
 export default function MarketingHelp() {
   const [isOpen, setIsOpen] = useState(false);
-  const kindRef = useRef("pdf"); // "pdf" | "html"
+  const kindRef = useRef("pdf");       // "pdf" | "html"
+  const reqIdRef = useRef(null);       // requestId pour le handshake
 
-  // Ouvre le modal via un CustomEvent
+  // Ouverture via CustomEvent
   useEffect(() => {
     const onOpen = (e) => {
-      kindRef.current = (e.detail && e.detail.kind) || "pdf";
+      kindRef.current = (e?.detail?.kind) || "pdf";
+      reqIdRef.current = e?.detail?.requestId ?? null;
       setIsOpen(true);
     };
     window.addEventListener("mkt-help:open", onOpen);
     return () => window.removeEventListener("mkt-help:open", onOpen);
   }, []);
 
-  const close = useCallback(() => setIsOpen(false), []);
+  // Scroll lock (mobile)
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
+  const emitResolved = useCallback((action) => {
+    const detail = {
+      modal: "marketing",
+      requestId: reqIdRef.current,
+      format: kindRef.current, // "pdf" | "html"
+      action,                  // "confirm" | "close" | "dismiss" | "escape" | "x"
+    };
+    // événement spécifique
+    window.dispatchEvent(new CustomEvent("mkt-help:resolved", { detail }));
+    // événement générique
+    window.dispatchEvent(new CustomEvent("deliverable-help:resolved", { detail }));
+  }, []);
+
+  const closeOnly = useCallback(() => setIsOpen(false), []);
+  const closeWith = useCallback((action) => {
+    emitResolved(action);
+    setIsOpen(false);
+  }, [emitResolved]);
 
   // ESC pour fermer
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e) => { if (e.key === "Escape") close(); };
+    const onKey = (e) => { if (e.key === "Escape") closeWith("escape"); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [isOpen, close]);
+  }, [isOpen, closeWith]);
 
   if (!isOpen) return null;
 
@@ -49,39 +76,24 @@ export default function MarketingHelp() {
 - À adapter : ton, exemples, visuels, prix & offres par segment`;
 
     let copied = false;
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        copied = true;
-      }
-    } catch (_) {}
-
+    try { if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); copied = true; } } catch {}
     if (!copied) {
       const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      try { document.execCommand("copy"); } catch (_) {}
+      ta.value = text; ta.readOnly = true; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try { document.execCommand("copy"); } catch {}
       document.body.removeChild(ta);
     }
 
     const btn = document.getElementById("mkt-help-copy");
-    if (btn) {
-      const prev = btn.textContent;
-      btn.textContent = "Copié ✓";
-      setTimeout(() => { btn.textContent = prev || "Copier la checklist"; }, 1500);
-    }
+    if (btn) { const prev = btn.textContent; btn.textContent = "Copié ✓"; setTimeout(() => { btn.textContent = prev || "Copier la checklist"; }, 1500); }
   };
 
   return createPortal(
     <>
       {/* Overlay */}
       <div
-        onClick={close}
+        onClick={() => closeWith("dismiss")}
         style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998 }}
       />
 
@@ -110,7 +122,7 @@ export default function MarketingHelp() {
               <div id="mkt-help-sub" style={{ color: "#9ca3af", fontSize: 12 }}>{sub}</div>
             </div>
             <button
-              onClick={close}
+              onClick={() => closeWith("x")}
               aria-label="Fermer"
               style={{ background: "#0b1220", border: "1px solid #1f2937", color: "#e5e7eb",
                        borderRadius: 10, padding: "8px 10px", cursor: "pointer" }}
@@ -189,7 +201,7 @@ export default function MarketingHelp() {
                 Copier la checklist
               </button>
               <button
-                onClick={close}
+                onClick={() => closeWith("confirm")}
                 id="mkt-help-close"
                 style={{ background: "#14b8a6", border: "none", color: "#052e2b",
                          padding: "10px 12px", borderRadius: 10, fontWeight: 800, cursor: "pointer" }}

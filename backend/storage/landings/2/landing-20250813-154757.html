@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>QualiAI — Landing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+      :root { color-scheme: dark; }
+      body { margin:0; background:#0f172a; color:#e5e7eb; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      .wrap { max-width:1100px; margin:0 auto; padding:24px; }
+      header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
+      .brand { display:flex; align-items:center; gap:12px; }
+      .brand img { height:42px; width:auto; border-radius:8px; background:#0b1220; border:1px solid #1f2937; }
+      .brand .t { display:flex; flex-direction:column; line-height:1.1 }
+      .brand .n { font-weight:800; font-size:20px }
+      .brand .s { color:#9ca3af; font-size:12px }
+      .cta { display:flex; gap:10px }
+      .cta a, .cta button, .cta-btn { background:#8b93ff; color:white; border:none; padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; text-decoration:none }
+      .cta a:hover, .cta button:hover, .cta-btn:hover { filter:brightness(1.05) }
+      .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:18px; align-items:center; padding:16px 0 26px; }
+      .hero h1 { font-size:36px; margin:6px 0 10px; }
+      .hero p { color:#cbd5e1 }
+      .panel { background:#111827; border:1px solid #1f2937; border-radius:16px; padding:18px; }
+      .grid { display:grid; gap:14px }
+      .grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)) }
+      .grid-3 { grid-template-columns:repeat(3,minmax(0,1fr)) }
+      .list li { margin:6px 0 }
+      section h2 { font-size:22px; margin:18px 0 10px; color:#8b93ff }
+      .badge { display:inline-block; background:#0b1220; border:1px solid #1f2937; padding:6px 10px; border-radius:999px; font-size:12px; color:#cbd5e1; margin-right:6px }
+      .price { font-size:28px; font-weight:800 }
+      form input, form textarea { width:100%; background:#0b1220; color:#e5e7eb; border:1px solid #1f2937; border-radius:10px; padding:10px 12px; }
+      form button { background:#14b8a6; color:#052e2b; border:none; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer }
+      small.muted { color:#9ca3af }
+      footer { margin:24px 0 10px; color:#9ca3af; font-size:12px; text-align:center }
+      @media (max-width: 900px) { .hero { grid-template-columns:1fr; } }
+    </style>
+    
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      
+      <div class="t">
+        <div class="n">QualiAI</div>
+        <div class="s">Optimisez votre qualité avec l&#x27;IA.</div>
+      </div>
+    </div>
+    <div class="cta">
+      <a href="#contact">Commencer</a>
+      <a href="#pricing">Tarifs</a>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="panel">
+      <span class="badge">Secteur : qualité industriel</span> <span class='badge'>PME</span> <span class='badge'>Grandes entreprises</span> 
+      <h1>Améliorez la Qualité Industrielle avec QualiAI</h1>
+      <p>Détectez, Analysez et Résolvez les Anomalies en Temps Réel</p>
+      <ul class='list'><li>Réduction des temps d&#x27;arrêt</li><li>Productivité accrue</li><li>Insights exploitables instantanément</li></ul>
+      <div class="cta" style="margin-top:10px">
+        <a href="#contact">Demander une démo</a>
+        <a href="#pricing" style="background:#0b1220; border:1px solid #1f2937">Voir les tarifs</a>
+      </div>
+    </div>
+    <div class="panel"><svg viewBox="0 0 600 360" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Product">
+      <defs>
+        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#8b93ff"/><stop offset="100%" stop-color="#14b8a6"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="600" height="360" fill="#0b1220"/>
+      <rect x="24" y="24" width="552" height="312" rx="14" fill="url(#g)" opacity="0.18"/>
+      <g opacity="0.9">
+        <rect x="60" y="72" width="480" height="40" rx="8" fill="#111827" stroke="#1f2937"/>
+        <rect x="60" y="126" width="360" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="160" width="420" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="194" width="300" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="238" width="160" height="44" rx="10" fill="#111827" stroke="#1f2937"/>
+      </g>
+    </svg></div>
+  </div>
+
+  <section id="features" class="panel">
+    <h2>Fonctionnalités clés</h2>
+    <div class='grid grid-3'><div class='panel'><strong>Détection Automatique</strong><br/>Utilisez notre IA pour identifier les anomalies avant qu&#x27;elles n&#x27;affectent votre production.</div><div class='panel'><strong>Analyse en Profondeur</strong><br/>Transformez vos données en insights exploitables pour des décisions éclairées.</div><div class='panel'><strong>Résolution Proactive</strong><br/>Anticipez et résolvez les problèmes rapidement pour minimiser les interruptions.</div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Pourquoi nous</h2>
+    <ul class='list'><li>Technologie d&#x27;IA avancée</li><li>Intégration facile avec vos systèmes existants</li><li>Conforme aux normes RGPD/UE</li></ul>
+  </section>
+
+  <section id="pricing" class="panel">
+    <h2>Tarification</h2>
+    <div class='grid grid-3'><div class='panel'><div><strong>Starter</strong></div><div class='price'>123 € / mois</div><ul class='list'><li>Accès aux fonctionnalités de base</li><li>Support standard</li><li>Mises à jour régulières</li></ul><div style='margin-top:8px'><a class='cta-btn' href='#contact'>Commencez dès aujourd&#x27;hui</a></div></div><div class='panel'><div><strong>Pro</strong></div><div class='price'>199 € / mois</div><ul class='list'><li>Toutes les fonctionnalités Starter</li><li>Support prioritaire</li><li>Rapports avancés</li></ul><div style='margin-top:8px'><a class='cta-btn' href='#contact'>Passez au niveau supérieur</a></div></div><div class='panel'><div><strong>Entreprise</strong></div><div class='price'>Sur devis</div><ul class='list'><li>Solutions sur mesure</li><li>Support dédié</li><li>Intégrations personnalisées</li></ul><div style='margin-top:8px'><a class='cta-btn' href='#contact'>Contactez-nous pour un devis</a></div></div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Confiance & conformité</h2>
+    <ul class='list'><li>Adopté par des leaders du secteur</li><li>Fiabilité prouvée</li><li>Partenariats stratégiques en Europe</li></ul>
+  </section>
+
+  <section class="panel">
+    <h2>Témoignages</h2>
+    <div class="grid grid-2">
+      <div class='panel'>“QualiAI a transformé notre processus de contrôle qualité, réduisant nos temps d&#x27;arrêt de 30%.” — Jean Dupont, Responsable qualité chez ABC Manufacturing</div>
+    </div>
+  </section>
+
+  <section id="faq" class="panel">
+    <h2>FAQ</h2>
+    <div class="grid grid-2">
+      <div class='panel'><strong>Comment QualiAI aide-t-elle à réduire les temps d&#x27;arrêt ?</strong><br/>Notre IA détecte les anomalies en temps réel, permettant une intervention rapide avant que les problèmes ne s&#x27;aggravent.</div><div class='panel'><strong>Est-ce que QualiAI est compatible avec nos systèmes existants ?</strong><br/>Oui, notre plateforme s&#x27;intègre facilement avec la plupart des systèmes industriels.</div>
+    </div>
+  </section>
+
+  <section id="contact" class="panel">
+    <h2>Contact</h2>
+    <form action="/api/landing/lead" method="POST">
+      <input type="hidden" name="project_id" value="67" />
+      <div class="grid grid-2">
+        <div><label>Nom</label><br/><input name="name" required placeholder="Votre nom"/></div>
+        <div><label>Email</label><br/><input name="email" type="email" required placeholder="vous@exemple.com"/></div>
+      </div>
+      <div style="margin-top:8px">
+        <label>Message</label><br/>
+        <textarea name="message" rows="4" placeholder="Parlez-nous de votre besoin (optionnel)"></textarea>
+      </div>
+      <div style="margin-top:10px"><button type="submit">Envoyer</button></div>
+      <small class="muted">Nous répondons sous 24–48h.</small>
+    </form>
+  </section>
+
+  <footer>© QualiAI — Tous droits réservés</footer>
+</div>
+</body>
+</html>

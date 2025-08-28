@@ -5,12 +5,14 @@ import { createPortal } from "react-dom";
 
 export default function BusinessPlanHelp() {
   const [isOpen, setIsOpen] = useState(false);
-  const kindRef = useRef("pdf"); // "pdf" | "html"
+  const kindRef  = useRef("pdf");     // "pdf" | "html"
+  const afterRef = useRef(null);       // callback passé par le Dashboard
 
   // Ouvre le modal via un CustomEvent
   useEffect(() => {
     const onOpen = (e) => {
-      kindRef.current = (e.detail && e.detail.kind) || "pdf";
+      kindRef.current  = (e.detail && e.detail.kind) || "pdf";
+      afterRef.current = (e.detail && e.detail.after) || null;
       setIsOpen(true);
     };
     window.addEventListener("bp-help:open", onOpen);
@@ -26,6 +28,14 @@ export default function BusinessPlanHelp() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [isOpen, close]);
+
+  // Lock scroll en arrière-plan (mobile friendly)
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -46,36 +56,25 @@ export default function BusinessPlanHelp() {
 - Risques : 3 risques clés + plan B
 - Annexes : devis/factures, lettres d’intention, CV, statuts (brouillon), Kbis si dispo`;
 
-    // Tentative via Clipboard API (HTTPS/localhost)
     let copied = false;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        copied = true;
-      }
-    } catch (_) {}
-
-    // Fallback (textarea + execCommand)
+    try { await navigator.clipboard.writeText(text); copied = true; } catch {}
     if (!copied) {
       const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      try { document.execCommand("copy"); } catch (_) {}
+      ta.value = text; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try { document.execCommand("copy"); } catch {}
       document.body.removeChild(ta);
     }
-
-    // Feedback visuel sur le bouton
     const btn = document.getElementById("bp-help-copy");
-    if (btn) {
-      const prev = btn.textContent;
-      btn.textContent = "Copié ✓";
-      setTimeout(() => { btn.textContent = prev || "Copier la checklist"; }, 1500);
-    }
+    if (btn) { const prev = btn.textContent; btn.textContent = "Copié ✓"; setTimeout(() => { btn.textContent = prev || "Copier la checklist"; }, 1500); }
+  };
+
+  // Valider = exécuter le callback (si fourni) puis fermer
+  const proceedAndClose = () => {
+    const fn = afterRef.current;
+    afterRef.current = null; // évite double appel
+    try { if (typeof fn === "function") fn(); } catch {}
+    close();
   };
 
   return createPortal(
@@ -170,7 +169,7 @@ export default function BusinessPlanHelp() {
               </div>
             </div>
 
-            {/** Spécifique aux formats **/}
+            {/* Formats */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>PDF ou HTML : que faire ?</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>
@@ -198,7 +197,7 @@ export default function BusinessPlanHelp() {
                 Copier la checklist
               </button>
               <button
-                onClick={close}
+                onClick={proceedAndClose}
                 id="bp-help-close"
                 style={{ background: "#14b8a6", border: "none", color: "#052e2b",
                          padding: "10px 12px", borderRadius: 10, fontWeight: 800, cursor: "pointer" }}

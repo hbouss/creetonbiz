@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>DigiOpti — Landing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+      :root { color-scheme: dark; }
+      body { margin:0; background:#0f172a; color:#e5e7eb; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      .wrap { max-width:1100px; margin:0 auto; padding:24px; }
+      header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
+      .brand { display:flex; align-items:center; gap:12px; }
+      .brand img { height:42px; width:auto; border-radius:8px; background:#0b1220; border:1px solid #1f2937; }
+      .brand .t { display:flex; flex-direction:column; line-height:1.1 }
+      .brand .n { font-weight:800; font-size:20px }
+      .brand .s { color:#9ca3af; font-size:12px }
+      .cta { display:flex; gap:10px }
+      .cta a, .cta button, .cta-btn { background:#8b93ff; color:white; border:none; padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; text-decoration:none }
+      .cta a:hover, .cta button:hover, .cta-btn:hover { filter:brightness(1.05) }
+      .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:18px; align-items:center; padding:16px 0 26px; }
+      .hero h1 { font-size:36px; margin:6px 0 10px; }
+      .hero p { color:#cbd5e1 }
+      .panel { background:#111827; border:1px solid #1f2937; border-radius:16px; padding:18px; }
+      .grid { display:grid; gap:14px }
+      .grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)) }
+      .grid-3 { grid-template-columns:repeat(3,minmax(0,1fr)) }
+      .list li { margin:6px 0 }
+      section h2 { font-size:22px; margin:18px 0 10px; color:#8b93ff }
+      .badge { display:inline-block; background:#0b1220; border:1px solid #1f2937; padding:6px 10px; border-radius:999px; font-size:12px; color:#cbd5e1; margin-right:6px }
+      .price { font-size:28px; font-weight:800 }
+      form input, form textarea { width:100%; background:#0b1220; color:#e5e7eb; border:1px solid #1f2937; border-radius:10px; padding:10px 12px; }
+      form button { background:#14b8a6; color:#052e2b; border:none; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer }
+      small.muted { color:#9ca3af }
+      footer { margin:24px 0 10px; color:#9ca3af; font-size:12px; text-align:center }
+      @media (max-width: 900px) { .hero { grid-template-columns:1fr; } }
+    </style>
+    
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      
+      <div class="t">
+        <div class="n">DigiOpti</div>
+        <div class="s">Optimisez vos processus, boostez votre productivité.</div>
+      </div>
+    </div>
+    <div class="cta">
+      <a href="#contact">Commencer</a>
+      <a href="#pricing">Tarifs</a>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="panel">
+      <span class="badge">Secteur : digitalisation</span> <span class='badge'>PME</span> <span class='badge'>Multi-secteurs</span> 
+      <h1>Digitalisez vos processus avec DigiOpti</h1>
+      <p>Automatisez les tâches répétitives et boostez votre productivité.</p>
+      <ul class='list'><li>Interface intuitive et facile à utiliser</li><li>Intégrations IA pour une efficacité accrue</li><li>Conçu pour les PME de tous secteurs</li></ul>
+      <div class="cta" style="margin-top:10px">
+        <a href="#contact">Demander une démo</a>
+        <a href="#pricing" style="background:#0b1220; border:1px solid #1f2937">Voir les tarifs</a>
+      </div>
+    </div>
+    <div class="panel"><svg viewBox="0 0 600 360" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Product">
+      <defs>
+        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#8b93ff"/><stop offset="100%" stop-color="#14b8a6"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="600" height="360" fill="#0b1220"/>
+      <rect x="24" y="24" width="552" height="312" rx="14" fill="url(#g)" opacity="0.18"/>
+      <g opacity="0.9">
+        <rect x="60" y="72" width="480" height="40" rx="8" fill="#111827" stroke="#1f2937"/>
+        <rect x="60" y="126" width="360" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="160" width="420" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="194" width="300" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="238" width="160" height="44" rx="10" fill="#111827" stroke="#1f2937"/>
+      </g>
+    </svg></div>
+  </div>
+
+  <section id="features" class="panel">
+    <h2>Fonctionnalités clés</h2>
+    <div class='grid grid-3'><div class='panel'><strong>Automatisation des tâches</strong><br/>Réduisez le temps passé sur les tâches répétitives grâce à notre automatisation intelligente.</div><div class='panel'><strong>Interface intuitive</strong><br/>Pas besoin d&#x27;être un expert technique pour utiliser notre plateforme.</div><div class='panel'><strong>Intégrations IA</strong><br/>Profitez des dernières avancées en intelligence artificielle pour optimiser vos processus.</div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Pourquoi nous</h2>
+    <ul class='list'><li>Solution spécialement conçue pour les PME</li><li>Facilité d&#x27;utilisation sans compétences techniques</li><li>Support client dédié et réactif</li></ul>
+  </section>
+
+  <section id="pricing" class="panel">
+    <h2>Tarification</h2>
+    <div class='grid grid-3'><div class='panel'><div><strong>Starter</strong></div><div class='price'>123 € / mois</div><ul class='list'><li>Accès à toutes les fonctionnalités de base</li><li>Support par email</li><li>Formation initiale incluse</li></ul><div style='margin-top:8px'><a class='cta-btn' href='#contact'>Commencer avec Starter</a></div></div><div class='panel'><div><strong>Pro</strong></div><div class='price'>199 € / mois</div><ul class='list'><li>Fonctionnalités avancées</li><li>Support prioritaire</li><li>Intégrations personnalisées</li></ul><div style='margin-top:8px'><a class='cta-btn' href='#contact'>Passer à Pro</a></div></div><div class='panel'><div><strong>Entreprise</strong></div><div class='price'>Sur devis</div><ul class='list'><li>Solutions sur mesure</li><li>Support dédié 24/7</li><li>Consultation stratégique</li></ul><div style='margin-top:8px'><a class='cta-btn' href='#contact'>Contactez-nous pour Entreprise</a></div></div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Confiance & conformité</h2>
+    <ul class='list'><li>Conforme aux normes RGPD</li><li>Des centaines de PME déjà satisfaites</li></ul>
+  </section>
+
+  <section class="panel">
+    <h2>Témoignages</h2>
+    <div class="grid grid-2">
+      <div class='panel'>“DigiOpti a transformé notre façon de travailler, nous économisons des heures chaque semaine.” — Jean Dupont, Responsable digitalisation</div>
+    </div>
+  </section>
+
+  <section id="faq" class="panel">
+    <h2>FAQ</h2>
+    <div class="grid grid-2">
+      <div class='panel'><strong>DigiOpti est-il adapté à mon secteur d&#x27;activité?</strong><br/>Oui, notre solution est conçue pour être flexible et s&#x27;adapter à divers secteurs d&#x27;activité.</div><div class='panel'><strong>Est-il nécessaire d&#x27;avoir des compétences techniques pour utiliser DigiOpti?</strong><br/>Non, notre interface intuitive est conçue pour être utilisée par tout le monde, sans compétences techniques.</div>
+    </div>
+  </section>
+
+  <section id="contact" class="panel">
+    <h2>Contact</h2>
+    <form action="/api/landing/lead" method="POST">
+      <input type="hidden" name="project_id" value="70" />
+      <div class="grid grid-2">
+        <div><label>Nom</label><br/><input name="name" required placeholder="Votre nom"/></div>
+        <div><label>Email</label><br/><input name="email" type="email" required placeholder="vous@exemple.com"/></div>
+      </div>
+      <div style="margin-top:8px">
+        <label>Message</label><br/>
+        <textarea name="message" rows="4" placeholder="Parlez-nous de votre besoin (optionnel)"></textarea>
+      </div>
+      <div style="margin-top:10px"><button type="submit">Envoyer</button></div>
+      <small class="muted">Nous répondons sous 24–48h.</small>
+    </form>
+  </section>
+
+  <footer>© DigiOpti — Tous droits réservés</footer>
+</div>
+</body>
+</html>

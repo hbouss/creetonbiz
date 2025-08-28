@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>RapCollab — Landing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root { color-scheme: dark; }
+body { margin:0; background:#0f172a; color:#e5e7eb; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+.wrap { max-width:1100px; margin:0 auto; padding:24px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
+.brand { display:flex; align-items:center; gap:12px; }
+.brand img { height:42px; width:auto; border-radius:8px; background:#0b1220; border:1px solid #1f2937; }
+.brand .t { display:flex; flex-direction:column; line-height:1.1 }
+.brand .n { font-weight:800; font-size:20px }
+.brand .s { color:#9ca3af; font-size:12px }
+.cta { display:flex; gap:10px }
+.cta a, .cta button { background:#8b93ff; color:white; border:none; padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; text-decoration:none }
+.cta a:hover, .cta button:hover { filter:brightness(1.05) }
+.hero { display:grid; grid-template-columns:1.1fr .9fr; gap:18px; align-items:center; padding:16px 0 26px; }
+.hero h1 { font-size:36px; margin:6px 0 10px; }
+.hero p { color:#cbd5e1 }
+.panel { background:#111827; border:1px solid #1f2937; border-radius:16px; padding:18px; }
+.grid { display:grid; gap:14px }
+.grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)) }
+.grid-3 { grid-template-columns:repeat(3,minmax(0,1fr)) }
+.list li { margin:6px 0 }
+section h2 { font-size:22px; margin:18px 0 10px; color:#8b93ff }
+.badge { display:inline-block; background:#0b1220; border:1px solid #1f2937; padding:6px 10px; border-radius:999px; font-size:12px; color:#cbd5e1 }
+.price { font-size:28px; font-weight:800 }
+form input, form textarea { width:100%; background:#0b1220; color:#e5e7eb; border:1px solid #1f2937; border-radius:10px; padding:10px 12px; }
+form button { background:#14b8a6; color:#052e2b; border:none; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer }
+small.muted { color:#9ca3af }
+footer { margin:24px 0 10px; color:#9ca3af; font-size:12px; text-align:center }
+@media (max-width: 900px) {
+  .hero { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      
+      <div class="t">
+        <div class="n">RapCollab</div>
+        <div class="s">Créez ensemble, même à distance.</div>
+      </div>
+    </div>
+    <div class="cta">
+      <a href="#contact">Essayer</a>
+      <a href="#features">Fonctionnalités</a>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="panel">
+      <span class="badge">Secteur : musique</span>
+      <h1>RapCollab — Créez ensemble, même à distance.</h1>
+      <p>Concept — Une plateforme collaborative permettant aux artistes de rap de créer et partager des morceaux en temps réel, facilitant ainsi les collaborations à distance. Les utilisateurs peuvent échanger des idées, des beats et des paroles dans un environnement intuitif. Marché — Ciblant les jeunes artistes indépendants et les producteurs, ce marché est en pleine expansion avec l'essor de la musique numérique et des réseaux sociaux. Les opportunités de collaboration sont croissantes. Projection — En 12 à 24 mois, viser 100 000 utilisateurs actifs, avec des partenariats avec des écoles de musique et des événements locaux pour renforcer la notoriété et l'adoption.</p>
+      <div class="cta" style="margin-top:10px">
+        <a href="#contact">Demander une démo</a>
+        <a href="#pricing" style="background:#0b1220; border:1px solid #1f2937">Tarifs</a>
+      </div>
+      <ul class="list">
+        <li>⚡ Mise en place rapide — onboarding guidé</li>
+        <li>🔒 Conforme RGPD — données hébergées en UE</li>
+        <li>📈 Suivi de vos KPI — vues synthétiques</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <svg viewBox="0 0 600 360" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Product">
+      <defs>
+        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#8b93ff"/><stop offset="100%" stop-color="#14b8a6"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="600" height="360" fill="#0b1220"/>
+      <rect x="24" y="24" width="552" height="312" rx="14" fill="url(#g)" opacity="0.18"/>
+      <g opacity="0.9">
+        <rect x="60" y="72" width="480" height="40" rx="8" fill="#111827" stroke="#1f2937"/>
+        <rect x="60" y="126" width="360" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="160" width="420" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="194" width="300" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="238" width="160" height="44" rx="10" fill="#111827" stroke="#1f2937"/>
+      </g>
+    </svg>
+    </div>
+  </div>
+
+  <section id="features" class="panel">
+    <h2>Fonctionnalités clés</h2>
+    <div class="grid grid-3">
+      <div class="panel"><strong>01 — Valeur</strong><br/>Résume l’avantage principal pour le client.</div>
+      <div class="panel"><strong>02 — Gain</strong><br/>Chiffrer (temps/€) quand possible.</div>
+      <div class="panel"><strong>03 — Différenciation</strong><br/>Pourquoi vous plutôt qu’un autre.</div>
+    </div>
+  </section>
+
+  <section id="pricing" class="panel">
+    <h2>Tarification</h2>
+    <div class="grid grid-3">
+      <div class="panel">
+        <div><strong>Starter</strong></div>
+        <div class="price">29 € / mois</div>
+        <small class="muted">Pour démarrer et valider le besoin.</small>
+      </div>
+      <div class="panel">
+        <div><strong>Pro</strong></div>
+        <div class="price">79 € / mois</div>
+        <small class="muted">Fonctionnalités avancées + support.</small>
+      </div>
+      <div class="panel">
+        <div><strong>Entreprise</strong></div>
+        <div class="price">Sur devis</div>
+        <small class="muted">Accord cadre, SSO, SLA, onboarding.</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Témoignages</h2>
+    <div class="grid grid-2">
+      <div class="panel">“Très simple à déployer, ROI clair.” — Client A</div>
+      <div class="panel">“Support réactif et pro.” — Client B</div>
+    </div>
+  </section>
+
+  <section id="faq" class="panel">
+    <h2>FAQ (extraits)</h2>
+    <div class="grid grid-2">
+      <div class="panel"><strong>Essai gratuit ?</strong><br/>Oui, 14 jours sans CB.</div>
+      <div class="panel"><strong>Données & RGPD ?</strong><br/>Serveurs UE, DPA disponible.</div>
+    </div>
+  </section>
+
+  <section id="contact" class="panel">
+    <h2>Contact</h2>
+    <form action="/api/landing/lead" method="POST">
+      <input type="hidden" name="project_id" value="53" />
+      <div class="grid grid-2">
+        <div><label>Nom</label><br/><input name="name" required placeholder="Votre nom"/></div>
+        <div><label>Email</label><br/><input name="email" type="email" required placeholder="vous@exemple.com"/></div>
+      </div>
+      <div style="margin-top:8px">
+        <label>Message</label><br/>
+        <textarea name="message" rows="4" placeholder="Parlez-nous de votre besoin (optionnel)"></textarea>
+      </div>
+      <div style="margin-top:10px"><button type="submit">Envoyer</button></div>
+      <small class="muted">Nous répondons sous 24–48h.</small>
+    </form>
+  </section>
+
+  <footer>© RapCollab — Tous droits réservés</footer>
+</div>
+</body>
+</html>

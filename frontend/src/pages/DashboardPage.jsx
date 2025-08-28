@@ -639,20 +639,23 @@ export default function DashboardPage() {
                       const isBrand = d.kind === "brand" || d.kind === "branding" || /brand|branding|identité|charte/i.test(d.title || "");
                       const isOffer = d.kind === "offer" || /offre|offer/i.test(d.title || "");
 
-                      const openHelpPDF = () => {
-                        if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open", { detail: { kind: "pdf" } }));
-                        if (isMarketing) window.dispatchEvent(new CustomEvent("mkt-help:open", { detail: { kind: "pdf" } }));
-                        if (isBrand) window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "pdf" } }));
-                        if (isOffer) window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "pdf" } }));
+                      const openHelpPDF = (after) => {
+                        if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open",    { detail: { kind: "pdf",  after } }));
+                        if (isMarketing)    window.dispatchEvent(new CustomEvent("mkt-help:open",   { detail: { kind: "pdf",  after } }));
+                        if (isBrand)        window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "pdf",  after } }));
+                        if (isOffer)        window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "pdf",  after } }));
                       };
-                      const openHelpHTML = () => {
+
+                      const openHelpHTML = (after) => {
                         if (isLanding) {
-                          window.dispatchEvent(new CustomEvent("landing-help:open", { detail: { kind: "html", deliverableId: d.id, projectId: p.id } }));
+                          window.dispatchEvent(new CustomEvent("landing-help:open", {
+                            detail: { kind: "html", deliverableId: d.id, projectId: p.id, after }
+                          }));
                         }
-                        if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open", { detail: { kind: "html" } }));
-                        if (isMarketing) window.dispatchEvent(new CustomEvent("mkt-help:open", { detail: { kind: "html" } }));
-                        if (isBrand) window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "html" } }));
-                        if (isOffer) window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "html" } }));
+                        if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open",    { detail: { kind: "html", after } }));
+                        if (isMarketing)    window.dispatchEvent(new CustomEvent("mkt-help:open",   { detail: { kind: "html", after } }));
+                        if (isBrand)        window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "html", after } }));
+                        if (isOffer)        window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "html", after } }));
                       };
 
                       return (
@@ -666,7 +669,7 @@ export default function DashboardPage() {
                             {/* Actions desktop */}
                             <div className="hidden sm:flex gap-2 items-center">
                               <button
-                                onClick={() => { openHelpPDF(); onDownload(d, "pdf"); }}
+                                onClick={() => openHelpPDF(() => onDownload(d, "pdf"))}
                                 className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
                               >
                                 PDF
@@ -674,7 +677,7 @@ export default function DashboardPage() {
 
                               {d.has_file && (
                                 <button
-                                  onClick={() => { openHelpHTML(); onDownload(d, "html"); }}
+                                  onClick={() => openHelpHTML(() => onDownload(d, "html"))}
                                   className="px-2 py-1 bg-green-700 hover:bg-green-600 rounded text-white text-sm"
                                 >
                                   HTML
@@ -741,41 +744,77 @@ export default function DashboardPage() {
       </main>
 
       {/* Bottom sheet actions (mobile) */}
-      {sheet.open && sheet.deliverable && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={closeDelivSheet} />
-          <div className="absolute bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 rounded-t-2xl p-4 space-y-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
-            <div className="flex items-center justify-between">
-              <p className="font-semibold truncate">{sheet.deliverable.title || sheet.deliverable.kind}</p>
-              <button onClick={closeDelivSheet} className="p-2 rounded-lg bg-gray-700">✕</button>
-            </div>
+{sheet.open && sheet.deliverable && (
+  <div className="fixed inset-0 z-50 md:hidden">
+    <div className="absolute inset-0 bg-black/50" onClick={closeDelivSheet} />
+    <div
+      className="absolute bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 rounded-t-2xl p-4 space-y-3"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+    >
+      <div className="flex items-center justify-between">
+        <p className="font-semibold truncate">{sheet.deliverable.title || sheet.deliverable.kind}</p>
+        <button onClick={closeDelivSheet} className="p-2 rounded-lg bg-gray-700">✕</button>
+      </div>
 
+      {(() => {
+        const d = sheet.deliverable;
+        const isLanding      = d.kind === "landing";
+        const isPlan         = d.kind === "plan" || /plan d'action/i.test(d.title || "");
+        const isBusinessPlan = d.kind === "business_plan" || d.kind === "model" || /business\s*plan/i.test(d.title || "");
+        const isMarketing    = d.kind === "marketing" || /marketing/i.test(d.title || "");
+        const isBrand        = d.kind === "brand" || d.kind === "branding" || /brand|branding|identité|charte/i.test(d.title || "");
+        const isOffer        = d.kind === "offer" || /offre|offer/i.test(d.title || "");
+        const publicUrl      = d?.json_content?.public_url ?? null;
+        const isPublished    = Boolean(publicUrl);
+
+        const openPDFHelp = (after) => {
+          if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open",    { detail: { kind: "pdf",  after } }));
+          if (isMarketing)    window.dispatchEvent(new CustomEvent("mkt-help:open",   { detail: { kind: "pdf",  after } }));
+          if (isBrand)        window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "pdf",  after } }));
+          if (isOffer)        window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "pdf",  after } }));
+          if (isLanding)      window.dispatchEvent(new CustomEvent("landing-help:open", { detail: { kind: "pdf", after, deliverableId: d.id, projectId: sheet.projectId } }));
+        };
+
+        const openHTMLHelp = (after) => {
+          if (isLanding) {
+            window.dispatchEvent(new CustomEvent("landing-help:open", {
+              detail: { kind: "html", after, deliverableId: d.id, projectId: sheet.projectId }
+            }));
+          }
+          if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open",    { detail: { kind: "html", after } }));
+          if (isMarketing)    window.dispatchEvent(new CustomEvent("mkt-help:open",   { detail: { kind: "html", after } }));
+          if (isBrand)        window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "html", after } }));
+          if (isOffer)        window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "html", after } }));
+        };
+
+        return (
+          <>
             <button
-              onClick={() => { window.dispatchEvent(new CustomEvent("bp-help:open", { detail: { kind: "pdf" } })); onDownload(sheet.deliverable, "pdf"); closeDelivSheet(); }}
+              onClick={() => { closeDelivSheet(); openPDFHelp(() => onDownload(d, "pdf")); }}
               className="w-full h-12 rounded-xl bg-indigo-600 text-white font-medium"
             >
               Télécharger PDF
             </button>
 
-            {sheet.deliverable.has_file && (
+            {d.has_file && (
               <button
-                onClick={() => { onDownload(sheet.deliverable, "html"); closeDelivSheet(); }}
+                onClick={() => { closeDelivSheet(); openHTMLHelp(() => onDownload(d, "html")); }}
                 className="w-full h-12 rounded-xl bg-green-700 text-white font-medium"
               >
                 Télécharger HTML
               </button>
             )}
 
-            {sheet.deliverable.kind === "plan" && (
+            {isPlan && (
               <button
-                onClick={() => { onDownload(sheet.deliverable, "ics"); closeDelivSheet(); }}
+                onClick={() => { onDownload(d, "ics"); closeDelivSheet(); }}
                 className="w-full h-12 rounded-xl bg-amber-600 text-white font-medium"
               >
                 Ajouter à l’agenda (.ics)
               </button>
             )}
 
-            {sheet.deliverable.kind === "landing" && !sheet.deliverable?.json_content?.public_url && (
+            {isLanding && !isPublished && (
               <button
                 onClick={async () => { await handlePublishLanding(sheet.projectId); closeDelivSheet(); }}
                 className="w-full h-12 rounded-xl bg-teal-600 text-white font-medium"
@@ -784,22 +823,25 @@ export default function DashboardPage() {
               </button>
             )}
 
-            {sheet.deliverable.kind === "landing" && sheet.deliverable?.json_content?.public_url && (
+            {isLanding && isPublished && (
               <div className="grid grid-cols-2 gap-2">
-                <a href={sheet.deliverable.json_content.public_url} target="_blank" rel="noreferrer" className="h-12 grid place-items-center rounded-xl bg-blue-600 text-white font-medium">
+                <a href={publicUrl} target="_blank" rel="noreferrer" className="h-12 grid place-items-center rounded-xl bg-blue-600 text-white font-medium">
                   Ouvrir
                 </a>
                 <button
-                  onClick={async () => { try { await navigator.clipboard.writeText(sheet.deliverable.json_content.public_url); } catch {} closeDelivSheet(); }}
+                  onClick={async () => { try { await navigator.clipboard.writeText(publicUrl); } catch {} closeDelivSheet(); }}
                   className="h-12 rounded-xl bg-gray-700 text-white font-medium"
                 >
                   Copier l’URL
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        );
+      })()}
+    </div>
+  </div>
+)}
 
       {/* ⬇️ Popup d’offres */}
       <OffersModal

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SideroForge — Landing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+      :root {
+        --primary:#8b93ff;
+        --accent:#14b8a6;
+        --bg:#0f172a;
+        --text:#e5e7eb;
+        --panel:#111827;
+        --border:#1f2937;
+        --muted:#9ca3af;
+        color-scheme: dark;
+      }
+      body { margin:0; background:var(--bg); color:var(--text); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      .wrap { max-width:1100px; margin:0 auto; padding:24px; }
+      header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
+      .brand { display:flex; align-items:center; gap:12px; }
+      .brand img { height:42px; width:auto; border-radius:8px; background:#0b1220; border:1px solid var(--border); }
+      .brand .t { display:flex; flex-direction:column; line-height:1.1 }
+      .brand .n { font-weight:800; font-size:20px }
+      .brand .s { color:var(--muted); font-size:12px }
+      .cta { display:flex; gap:10px }
+      .cta a, .cta button, .cta-btn { background:var(--primary); color:white; border:none; padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; text-decoration:none }
+      .cta a:hover, .cta button:hover, .cta-btn:hover { filter:brightness(1.05) }
+      .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:18px; align-items:center; padding:16px 0 26px; }
+      .hero h1 { font-size:36px; margin:6px 0 10px; }
+      .hero p { color:var(--muted) }
+      .panel { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; }
+      .grid { display:grid; gap:14px }
+      .grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)) }
+      .grid-3 { grid-template-columns:repeat(3,minmax(0,1fr)) }
+      .list li { margin:6px 0 }
+      section h2 { font-size:22px; margin:18px 0 10px; color:var(--primary) }
+      .badge { display:inline-block; background:#0b1220; border:1px solid var(--border); padding:6px 10px; border-radius:999px; font-size:12px; color:var(--muted); margin-right:6px }
+      .price { font-size:28px; font-weight:800 }
+      .card-title { font-weight:700; font-size:16px; margin-bottom:6px }
+      .kpi { margin-top:8px; font-weight:800; color:var(--accent) }
+      .muted { color:var(--muted) }
+      form input, form textarea { width:100%; background:#0b1220; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+      form button { background:var(--accent); color:#052e2b; border:none; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer }
+      footer { margin:24px 0 10px; color:var(--muted); font-size:12px; text-align:center }
+      @media (max-width: 900px) { .hero { grid-template-columns:1fr; } .grid-3 { grid-template-columns:1fr; } }
+    </style>
+    
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      
+      <div class="t">
+        <div class="n">SideroForge</div>
+        <div class="s">Forging the Future of Steel</div>
+      </div>
+    </div>
+    <div class="cta">
+      <a href="#contact">Commencer</a>
+      <a href="#pricing" style="background:#0b1220;border:1px solid var(--border);color:var(--text)">Tarifs</a>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="panel">
+      <span class="badge">Secteur : sidérurgie</span> <span class='badge'>Industrie lourde</span> <span class='badge'>Construction</span> 
+      <h1>Découvrez l&#x27;Excellence Acier avec SideroForge</h1>
+      <p>Forging the Future of Steel</p>
+      <ul class='list'><li>Qualité inégalée</li><li>Durabilité exceptionnelle</li><li>Innovation constante</li></ul>
+      <div class="cta" style="margin-top:10px">
+        <a href="#contact">Demander une démo</a>
+        <a href="#pricing" style="background:#0b1220; border:1px solid var(--border); color:var(--text)">Voir les tarifs</a>
+      </div>
+    </div>
+    <div class="panel"><svg viewBox="0 0 600 360" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Product">
+      <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0%" stop-color="#8b93ff"/><stop offset="100%" stop-color="#14b8a6"/>
+      </linearGradient></defs>
+      <rect x="0" y="0" width="600" height="360" fill="#0b1220"/>
+      <rect x="24" y="24" width="552" height="312" rx="14" fill="url(#g)" opacity="0.18"/>
+      <g opacity="0.9">
+        <rect x="60" y="72" width="480" height="40" rx="8" fill="#111827" stroke="#1f2937"/>
+        <rect x="60" y="126" width="360" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="160" width="420" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="194" width="300" height="24" rx="6" fill="#0b1220" />
+        <rect x="60" y="238" width="160" height="44" rx="10" fill="#111827" stroke="#1f2937"/>
+      </g>
+    </svg></div>
+  </div>
+
+  <section id="features" class="panel">
+    <h2>Fonctionnalités clés</h2>
+    <div class='grid grid-3'><div class='panel'><div class='card-title'>Acier de Haute Performance</div><div class='muted'>Optimisez vos projets avec notre acier de qualité supérieure.</div><ul class='list'><li>Résistance accrue</li><li>Adapté à toutes les conditions</li></ul><div class='kpi'>~15% d&#x27;efficacité améliorée</div></div><div class='panel'><div class='card-title'>Solutions Personnalisées</div><div class='muted'>Des solutions sur mesure pour répondre à vos besoins spécifiques.</div><ul class='list'><li>Conception sur mesure</li><li>Flexibilité de production</li></ul><div class='kpi'>~20% de réduction des coûts</div></div><div class='panel'><div class='card-title'>Livraison Rapide</div><div class='muted'>Assurez la continuité de vos opérations avec notre service de livraison rapide.</div><ul class='list'><li>Délais respectés</li><li>Suivi en temps réel</li></ul><div class='kpi'>~30% de temps économisé</div></div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Pourquoi nous</h2>
+    <div class='grid grid-3'><div class='panel'><div class='card-title'>Expertise reconnue dans la sidérurgie.</div><div class='muted'></div></div><div class='panel'><div class='card-title'>Engagement envers la durabilité environnementale.</div><div class='muted'></div></div><div class='panel'><div class='card-title'>Service client dédié et réactif.</div><div class='muted'></div></div></div>
+  </section>
+
+  <section id="pricing" class="panel">
+    <h2>Tarification</h2>
+    <div class='grid grid-3'><div class='panel'><div><strong>Starter</strong></div><div class='price'>29 € / mois</div><ul class='list'><li>Support standard</li><li>Accès aux produits de base</li></ul><div style='margin-top:8px'><a class='cta-btn' href='#contact'>Commencez dès aujourd&#x27;hui</a></div></div><div class='panel'><div><strong>Pro</strong></div><div class='price'>49 € / mois</div><ul class='list'><li>Support prioritaire</li><li>Accès à des produits avancés</li></ul><div style='margin-top:8px'><a class='cta-btn' href='#contact'>Passez au niveau supérieur</a></div></div><div class='panel'><div><strong>Entreprise</strong></div><div class='price'>Sur devis</div><ul class='list'><li>Solutions entièrement personnalisées</li><li>Support dédié</li></ul><div style='margin-top:8px'><a class='cta-btn' href='#contact'>Contactez-nous pour un devis</a></div></div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Confiance & conformité</h2>
+    <ul class='list'><li>Conforme aux normes RGPD/UE</li><li>Certifications ISO 9001</li><li>Partenaire de confiance des leaders du secteur</li></ul>
+  </section>
+
+  <section class="panel">
+    <h2>Témoignages</h2>
+    <div class="grid grid-2">
+      <div class='panel'>“SideroForge a transformé notre chaîne d&#x27;approvisionnement avec leur acier de haute qualité.” — Jean Dupont, Directeur des Achats</div>
+    </div>
+  </section>
+
+  <section id="faq" class="panel">
+    <h2>FAQ</h2>
+    <div class="grid grid-2">
+      <div class='panel'><strong>Quels types d&#x27;acier proposez-vous?</strong><br/>Nous offrons une gamme complète d&#x27;aciers adaptés à divers secteurs, incluant la construction et l&#x27;industrie lourde.</div>
+    </div>
+  </section>
+
+  <section id="contact" class="panel">
+    <h2>Contact</h2>
+    <form action="/api/landing/lead" method="POST">
+      <input type="hidden" name="project_id" value="111" />
+      <div class="grid grid-2">
+        <div><label>Nom</label><br/><input name="name" required placeholder="Votre nom"/></div>
+        <div><label>Email</label><br/><input name="email" type="email" required placeholder="vous@exemple.com"/></div>
+      </div>
+      <div style="margin-top:8px">
+        <label>Message</label><br/>
+        <textarea name="message" rows="4" placeholder="Parlez-nous de votre besoin (optionnel)"></textarea>
+      </div>
+      <div style="margin-top:10px"><button type="submit">Envoyer</button></div>
+      <small class="muted">Nous répondons sous 24–48h.</small>
+    </form>
+  </section>
+
+  <footer>© SideroForge — Tous droits réservés</footer>
+</div>
+</body>
+</html>
