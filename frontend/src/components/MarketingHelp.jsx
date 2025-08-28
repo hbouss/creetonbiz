@@ -5,14 +5,16 @@ import { createPortal } from "react-dom";
 
 export default function MarketingHelp() {
   const [isOpen, setIsOpen] = useState(false);
-  const kindRef = useRef("pdf");       // "pdf" | "html"
-  const reqIdRef = useRef(null);       // requestId pour le handshake
+  const kindRef = useRef("pdf");     // "pdf" | "html"
+  const reqIdRef = useRef(null);     // optionnel: requestId de suivi
+  const afterRef = useRef(null);     // ✅ callback passé par Dashboard pour lancer le download
 
   // Ouverture via CustomEvent
   useEffect(() => {
     const onOpen = (e) => {
       kindRef.current = (e?.detail?.kind) || "pdf";
       reqIdRef.current = e?.detail?.requestId ?? null;
+      afterRef.current  = typeof e?.detail?.after === "function" ? e.detail.after : null;
       setIsOpen(true);
     };
     window.addEventListener("mkt-help:open", onOpen);
@@ -27,22 +29,25 @@ export default function MarketingHelp() {
     return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
-  const emitResolved = useCallback((action) => {
+  const emitResolved = useCallback((action, executed = false) => {
     const detail = {
       modal: "marketing",
       requestId: reqIdRef.current,
       format: kindRef.current, // "pdf" | "html"
-      action,                  // "confirm" | "close" | "dismiss" | "escape" | "x"
+      action,                  // "confirm" | "dismiss" | "escape" | "x"
+      executed,                // true si le callback after a été exécuté
     };
-    // événement spécifique
     window.dispatchEvent(new CustomEvent("mkt-help:resolved", { detail }));
-    // événement générique
     window.dispatchEvent(new CustomEvent("deliverable-help:resolved", { detail }));
   }, []);
 
-  const closeOnly = useCallback(() => setIsOpen(false), []);
   const closeWith = useCallback((action) => {
-    emitResolved(action);
+    let executed = false;
+    if (action === "confirm" && typeof afterRef.current === "function") {
+      try { afterRef.current(); executed = true; } catch(_) {}
+      afterRef.current = null; // évite double run
+    }
+    emitResolved(action, executed);
     setIsOpen(false);
   }, [emitResolved]);
 
@@ -172,7 +177,7 @@ export default function MarketingHelp() {
               </ol>
             </div>
 
-            {/* Spécifique aux formats */}
+            {/* Formats */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>PDF ou HTML ?</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>

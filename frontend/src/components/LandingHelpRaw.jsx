@@ -5,21 +5,32 @@ import { createPortal } from "react-dom";
 
 export default function LandingHelp() {
   const [isOpen, setIsOpen] = useState(false);
-  const kindRef = useRef("html");   // "html" | "publish"
-  const reqIdRef = useRef(null);    // requestId
+
+  // "html" | "publish"
+  const kindRef = useRef("html");
+
+  // Handshake & contexte
+  const reqIdRef = useRef(null);           // requestId optionnel
+  const afterRef = useRef(null);           // callback à exécuter sur "confirm"
+  const deliverableIdRef = useRef(null);   // pour tracer/analytics si besoin
+  const projectIdRef = useRef(null);       // idem
 
   // Ouvre le modal via un CustomEvent
   useEffect(() => {
     const onOpen = (e) => {
-      kindRef.current = (e?.detail?.kind) || "html";
-      reqIdRef.current = e?.detail?.requestId ?? null;
+      const d = e?.detail || {};
+      kindRef.current = d.kind || "html";
+      reqIdRef.current = d.requestId ?? null;
+      afterRef.current = typeof d.after === "function" ? d.after : null;
+      deliverableIdRef.current = d.deliverableId ?? null;
+      projectIdRef.current = d.projectId ?? null;
       setIsOpen(true);
     };
     window.addEventListener("landing-help:open", onOpen);
     return () => window.removeEventListener("landing-help:open", onOpen);
   }, []);
 
-  // Scroll lock
+  // Scroll lock (mobile)
   useEffect(() => {
     if (!isOpen) return;
     const prev = document.body.style.overflow;
@@ -27,23 +38,37 @@ export default function LandingHelp() {
     return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
+  // Émet un évènement "résolu" (utile si tu écoutes ailleurs)
   const emitResolved = useCallback((action) => {
     const detail = {
       modal: "landing",
       requestId: reqIdRef.current,
+      deliverableId: deliverableIdRef.current,
+      projectId: projectIdRef.current,
       format: kindRef.current,  // "html" | "publish"
-      action,
+      action,                   // "confirm" | "dismiss" | "escape" | "x"
     };
     window.dispatchEvent(new CustomEvent("landing-help:resolved", { detail }));
     window.dispatchEvent(new CustomEvent("deliverable-help:resolved", { detail }));
   }, []);
 
-  const closeWith = useCallback((action) => {
-    emitResolved(action);
-    setIsOpen(false);
+  // Ferme en exécutant éventuellement le callback "after"
+  const closeWith = useCallback(async (action) => {
+    try {
+      if (action === "confirm" && typeof afterRef.current === "function") {
+        // ✅ Déclenche le téléchargement après confirmation
+        await Promise.resolve().then(() => afterRef.current());
+      }
+    } catch (_) {
+      // on ignore les erreurs du callback pour ne pas bloquer la fermeture
+    } finally {
+      afterRef.current = null;
+      emitResolved(action);
+      setIsOpen(false);
+    }
   }, [emitResolved]);
 
-  // ESC
+  // ESC pour fermer
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e) => { if (e.key === "Escape") closeWith("escape"); };
@@ -56,6 +81,37 @@ export default function LandingHelp() {
   const isPublish = kindRef.current === "publish";
   const title = isPublish ? "Mettre en ligne la landing" : "Utiliser le fichier HTML de la landing";
   const sub   = isPublish ? "Publication via l’app ou sur votre propre hébergeur" : "Héberger le fichier et connecter le formulaire";
+
+  // Copier l’exemple SCP (avec fallback)
+  const copySCP = async () => {
+    const text =
+      "scp landing.html user@votre-serveur:/var/www/html/index.html\n# puis (si Nginx) :\nsudo systemctl reload nginx\n";
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      }
+    } catch (_) {}
+    if (!copied) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.readOnly = true;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand("copy"); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+    const btn = document.getElementById("landing-help-copy-scp");
+    if (btn) {
+      const prev = btn.textContent;
+      btn.textContent = "Copié ✓";
+      setTimeout(() => { btn.textContent = prev || "Copier l’exemple SCP"; }, 1500);
+    }
+  };
 
   return createPortal(
     <>
@@ -101,6 +157,7 @@ export default function LandingHelp() {
 
           {/* Body */}
           <div style={{ padding: "18px 20px", display: "grid", gap: 16 }}>
+            {/* Option 1 */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Option 1 — Serveur perso (Nginx/Apache)</strong>
               <ol style={{ margin: "8px 0 0 18px" }}>
@@ -125,6 +182,7 @@ sudo systemctl reload nginx
               </details>
             </div>
 
+            {/* Option 2 */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Option 2 — Hébergement “sans serveur” (simple et gratuit)</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>
@@ -137,6 +195,7 @@ sudo systemctl reload nginx
               </div>
             </div>
 
+            {/* Modifier/brancher */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Modifier/brancher le fichier HTML</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>
@@ -165,16 +224,17 @@ sudo systemctl reload nginx
               </details>
             </div>
 
+            {/* Domaine */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Nom de domaine & HTTPS (optionnel, mais conseillé)</strong>
               <ol style={{ margin: "8px 0 0 18px" }}>
                 <li>Crée un sous-domaine (ex. <code>landing.ton-domaine.com</code>).</li>
-                <li>Relie-le à ton hébergeur :
-                  A/AAAA si serveur, ou CNAME si Netlify/Vercel.</li>
+                <li>Relie-le à ton hébergeur : A/AAAA si serveur, ou CNAME si Netlify/Vercel.</li>
                 <li>Active le HTTPS (Let’s Encrypt ou via la plateforme). Ton site doit être en <b>https://</b>.</li>
               </ol>
             </div>
 
+            {/* Bouton publier */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>Le bouton “Mettre en ligne” (dans l’app)</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>
@@ -183,19 +243,10 @@ sudo systemctl reload nginx
               </ul>
             </div>
 
+            {/* Actions */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
-                onClick={() => {
-                  const text =
-                    "scp landing.html user@votre-serveur:/var/www/html/index.html\n# puis (si Nginx) :\nsudo systemctl reload nginx\n";
-                  navigator.clipboard.writeText(text).then(() => {
-                    const btn = document.getElementById("landing-help-copy-scp");
-                    if (btn) {
-                      btn.textContent = "Copié ✓";
-                      setTimeout(() => { btn.textContent = "Copier l’exemple SCP"; }, 1500);
-                    }
-                  });
-                }}
+                onClick={copySCP}
                 id="landing-help-copy-scp"
                 style={{ background: "#8b93ff", border: "none", color: "#fff",
                          padding: "10px 12px", borderRadius: 10, fontWeight: 600, cursor: "pointer" }}
@@ -203,7 +254,7 @@ sudo systemctl reload nginx
                 Copier l’exemple SCP
               </button>
               <button
-                onClick={close}
+                onClick={() => closeWith("confirm")}
                 id="landing-help-close-2"
                 style={{ background: "#14b8a6", border: "none", color: "#052e2b",
                          padding: "10px 12px", borderRadius: 10, fontWeight: 800, cursor: "pointer" }}
@@ -211,6 +262,7 @@ sudo systemctl reload nginx
                 J’ai compris
               </button>
             </div>
+
             <div style={{ color: "#9ca3af", fontSize: 12 }}>
               Si la page ne se met pas à jour, vide le cache (Ctrl/Cmd+Shift+R).
             </div>

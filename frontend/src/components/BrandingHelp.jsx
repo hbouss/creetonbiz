@@ -5,14 +5,16 @@ import { createPortal } from "react-dom";
 
 export default function BrandingHelp() {
   const [isOpen, setIsOpen] = useState(false);
-  const kindRef = useRef("pdf");  // "pdf" | "html"
-  const reqIdRef = useRef(null);  // requestId
+  const kindRef = useRef("pdf");   // "pdf" | "html"
+  const reqIdRef = useRef(null);
+  const afterRef = useRef(null);   // ✅ callback download
 
   // Ouverture via CustomEvent
   useEffect(() => {
     const onOpen = (e) => {
       kindRef.current = (e?.detail?.kind) || "pdf";
       reqIdRef.current = e?.detail?.requestId ?? null;
+      afterRef.current  = typeof e?.detail?.after === "function" ? e.detail.after : null;
       setIsOpen(true);
     };
     window.addEventListener("brand-help:open", onOpen);
@@ -27,19 +29,25 @@ export default function BrandingHelp() {
     return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
-  const emitResolved = useCallback((action) => {
+  const emitResolved = useCallback((action, executed = false) => {
     const detail = {
       modal: "branding",
       requestId: reqIdRef.current,
-      format: kindRef.current, // "pdf" | "html"
+      format: kindRef.current,
       action,
+      executed,
     };
     window.dispatchEvent(new CustomEvent("brand-help:resolved", { detail }));
     window.dispatchEvent(new CustomEvent("deliverable-help:resolved", { detail }));
   }, []);
 
   const closeWith = useCallback((action) => {
-    emitResolved(action);
+    let executed = false;
+    if (action === "confirm" && typeof afterRef.current === "function") {
+      try { afterRef.current(); executed = true; } catch(_) {}
+      afterRef.current = null;
+    }
+    emitResolved(action, executed);
     setIsOpen(false);
   }, [emitResolved]);
 
@@ -178,7 +186,7 @@ export default function BrandingHelp() {
               </ol>
             </div>
 
-            {/* Spécifique aux formats */}
+            {/* Formats */}
             <div style={{ background: "#0b1220", border: "1px solid #1f2937", borderRadius: 12, padding: 14 }}>
               <strong>PDF ou HTML ?</strong>
               <ul style={{ margin: "8px 0 0 18px", listStyle: "disc" }}>
