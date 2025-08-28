@@ -52,6 +52,38 @@ export default function DashboardPage() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // 🔐 Handshake: callbacks à déclencher quand un modal “help” est confirmé/fermé (X)
+  const pendingHelpActionsRef = useRef(new Map());
+  const genRequestId = () => {
+    try {
+      return crypto?.randomUUID?.() || `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    } catch {
+      return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
+  };
+
+  // Écoute la résolution des modals (Marketing/Branding/Landing) -> ne télécharge QUE sur "confirm" ou "x"
+  useEffect(() => {
+    const onResolved = (e) => {
+      const detail = e?.detail || {};
+      const { requestId, action } = detail;
+      if (!requestId) return;
+      const cb = pendingHelpActionsRef.current.get(requestId);
+      if (!cb) return;
+      try {
+        if (action === "confirm" || action === "x") {
+          cb();
+        }
+      } catch (err) {
+        setError(err?.message || "Erreur pendant le téléchargement.");
+      } finally {
+        pendingHelpActionsRef.current.delete(requestId);
+      }
+    };
+    window.addEventListener("deliverable-help:resolved", onResolved);
+    return () => window.removeEventListener("deliverable-help:resolved", onResolved);
+  }, []);
+
   const credits = user?.startnow_credits ?? 0;
   const isInfinity = user?.plan === "infinity";
 
@@ -275,6 +307,68 @@ export default function DashboardPage() {
   // Helpers feuilles d’action (mobile)
   function openDelivSheet(d, pId) { setSheet({ open: true, projectId: pId, deliverable: d }); }
   function closeDelivSheet() { setSheet({ open: false, projectId: null, deliverable: null }); }
+
+  // ─────────────────────────────────────────────────────────────
+  // 🔗 Helpers pour ouvrir les modals d'aide avec handshake
+  // ─────────────────────────────────────────────────────────────
+  const openHelpCompatOrHandshake = (eventName, kind, after, extraDetail = {}) => {
+    // BusinessPlan & Offer : restent en mode compat (les modals existants appellent detail.after)
+    const needsCompat = eventName === "bp-help:open" || eventName === "offer-help:open";
+    if (needsCompat) {
+      window.dispatchEvent(new CustomEvent(eventName, { detail: { kind, after, ...extraDetail } }));
+      return;
+    }
+    // Marketing / Branding / Landing : handshake via requestId + deliverable-help:resolved
+    const requestId = genRequestId();
+    pendingHelpActionsRef.current.set(requestId, after);
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { kind, requestId, ...extraDetail } }));
+  };
+
+  const openHelpPDFFor = (d, projectId, flags) => {
+    const { isPlan, isBusinessPlan, isMarketing, isBrand, isOffer, isLanding } = flags;
+    // ✅ Plan d'action : pas de modal → télécharge direct
+    if (isPlan) {
+      onDownload(d, "pdf");
+      return;
+    }
+    if (isBusinessPlan) {
+      openHelpCompatOrHandshake("bp-help:open", "pdf", () => onDownload(d, "pdf"));
+    } else if (isMarketing) {
+      openHelpCompatOrHandshake("mkt-help:open", "pdf", () => onDownload(d, "pdf"));
+    } else if (isBrand) {
+      openHelpCompatOrHandshake("brand-help:open", "pdf", () => onDownload(d, "pdf"));
+    } else if (isOffer) {
+      openHelpCompatOrHandshake("offer-help:open", "pdf", () => onDownload(d, "pdf"));
+    } else if (isLanding) {
+      openHelpCompatOrHandshake("landing-help:open", "html", () => onDownload(d, "pdf"), {
+        deliverableId: d.id,
+        projectId,
+      });
+    } else {
+      // fallback sans modal
+      onDownload(d, "pdf");
+    }
+  };
+
+  const openHelpHTMLFor = (d, projectId, flags) => {
+    const { isBusinessPlan, isMarketing, isBrand, isOffer, isLanding } = flags;
+    if (isLanding) {
+      openHelpCompatOrHandshake("landing-help:open", "html", () => onDownload(d, "html"), {
+        deliverableId: d.id,
+        projectId,
+      });
+    } else if (isBusinessPlan) {
+      openHelpCompatOrHandshake("bp-help:open", "html", () => onDownload(d, "html"));
+    } else if (isMarketing) {
+      openHelpCompatOrHandshake("mkt-help:open", "html", () => onDownload(d, "html"));
+    } else if (isBrand) {
+      openHelpCompatOrHandshake("brand-help:open", "html", () => onDownload(d, "html"));
+    } else if (isOffer) {
+      openHelpCompatOrHandshake("offer-help:open", "html", () => onDownload(d, "html"));
+    } else {
+      onDownload(d, "html");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 overflow-x-hidden">
@@ -588,260 +682,225 @@ export default function DashboardPage() {
             {projects.length > 0 && <span className="text-xs text-gray-400">{projects.length} projet(s)</span>}
           </div>
 
-          {projects.length === 0 ? (
-            <div className="text-gray-400 text-sm">
-              Aucun projet pour le moment.
-              {(isInfinity || user?.plan === "startnow") && (
-                <> <button onClick={() => navigate("/")} className="underline text-blue-300 hover:text-blue-200">
-                  Créer un projet à partir d’une idée
-                </button>.</>
-              )}
-            </div>
-          ) : (
-            projects.map((p) => (
-              <div key={p.id} ref={(el) => (projectRefs.current[p.id] = el)} className="bg-gray-700 p-4 rounded-lg space-y-3">
-                <div className="flex justify-between items-start gap-3">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <span className="break-words">{p.title}</span>
-                    {p.idea_id ? (
-                      <span className="px-2 py-0.5 bg-blue-600 rounded text-xs">💡 Idée</span>
-                    ) : (
-                      <span className="px-2 py-0.5 bg-gray-600 rounded text-xs">📝 Manuel</span>
-                    )}
-                    {generatingProjectId === p.id && (
-                      <span className="ml-2 inline-flex items-center gap-2 text-xs text-gray-300">
-                        <span className="h-3 w-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Génération…
-                      </span>
-                    )}
-                  </h3>
+        {projects.length === 0 ? (
+          <div className="text-gray-400 text-sm">
+            Aucun projet pour le moment.
+            {(isInfinity || user?.plan === "startnow") && (
+              <> <button onClick={() => navigate("/")} className="underline text-blue-300 hover:text-blue-200">
+                Créer un projet à partir d’une idée
+              </button>.</>
+            )}
+          </div>
+        ) : (
+          projects.map((p) => (
+            <div key={p.id} ref={(el) => (projectRefs.current[p.id] = el)} className="bg-gray-700 p-4 rounded-lg space-y-3">
+              <div className="flex justify-between items-start gap-3">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <span className="break-words">{p.title}</span>
+                  {p.idea_id ? (
+                    <span className="px-2 py-0.5 bg-blue-600 rounded text-xs">💡 Idée</span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-gray-600 rounded text-xs">📝 Manuel</span>
+                  )}
+                  {generatingProjectId === p.id && (
+                    <span className="ml-2 inline-flex items-center gap-2 text-xs text-gray-300">
+                      <span className="h-3 w-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Génération…
+                    </span>
+                  )}
+                </h3>
 
-                  <button
-                    disabled={loading}
-                    onClick={() => handleDeleteProject(p.id)}
-                    className="shrink-0 text-red-400 hover:text-red-600 text-sm"
-                    title="Supprimer le projet"
-                  >
-                    🗑
-                  </button>
-                </div>
-
-                <ul className="grid sm:grid-cols-2 gap-3">
-                  {(deliverablesMap[p.id] || [])
-                    .filter((d) => d.kind !== "landing_public")
-                    .map((d) => {
-                      const isLanding = d.kind === "landing";
-                      const publicUrl = d?.json_content?.public_url ?? null;
-                      const isPublished = Boolean(publicUrl);
-                      const isPlan = d.kind === "plan" || /plan d'action/i.test(d.title || "");
-                      const isBusinessPlan = d.kind === "business_plan" || d.kind === "model" || /business\s*plan/i.test(d.title || "");
-                      const isMarketing = d.kind === "marketing" || /marketing/i.test(d.title || "");
-                      const isBrand = d.kind === "brand" || d.kind === "branding" || /brand|branding|identité|charte/i.test(d.title || "");
-                      const isOffer = d.kind === "offer" || /offre|offer/i.test(d.title || "");
-
-                      const openHelpPDF = (after) => {
-                        if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open",    { detail: { kind: "pdf",  after } }));
-                        if (isMarketing)    window.dispatchEvent(new CustomEvent("mkt-help:open",   { detail: { kind: "pdf",  after } }));
-                        if (isBrand)        window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "pdf",  after } }));
-                        if (isOffer)        window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "pdf",  after } }));
-                      };
-
-                      const openHelpHTML = (after) => {
-                        if (isLanding) {
-                          window.dispatchEvent(new CustomEvent("landing-help:open", {
-                            detail: { kind: "html", deliverableId: d.id, projectId: p.id, after }
-                          }));
-                        }
-                        if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open",    { detail: { kind: "html", after } }));
-                        if (isMarketing)    window.dispatchEvent(new CustomEvent("mkt-help:open",   { detail: { kind: "html", after } }));
-                        if (isBrand)        window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "html", after } }));
-                        if (isOffer)        window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "html", after } }));
-                      };
-
-                      return (
-                        <li key={d.id} className="bg-gray-600 p-3 rounded-lg">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="min-w-0">
-                              <p className="font-medium break-words">{d.title || d.kind}</p>
-                              <p className="text-xs text-gray-300">{new Date(d.created_at).toLocaleString()}</p>
-                            </span>
-
-                            {/* Actions desktop */}
-                            <div className="hidden sm:flex gap-2 items-center">
-                              <button
-                                onClick={() => openHelpPDF(() => onDownload(d, "pdf"))}
-                                className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
-                              >
-                                PDF
-                              </button>
-
-                              {d.has_file && (
-                                <button
-                                  onClick={() => openHelpHTML(() => onDownload(d, "html"))}
-                                  className="px-2 py-1 bg-green-700 hover:bg-green-600 rounded text-white text-sm"
-                                >
-                                  HTML
-                                </button>
-                              )}
-
-                              {isPlan && (
-                                <button
-                                  onClick={() => onDownload(d, "ics")}
-                                  className="px-2 py-1 bg-amber-600 hover:bg-amber-500 rounded text-white text-sm"
-                                >
-                                  Agenda (.ics)
-                                </button>
-                              )}
-
-                              {isLanding && !isPublished && (
-                                <button
-                                  disabled={!!publishingProjectId}
-                                  onClick={async () => {
-                                    await handlePublishLanding(p.id);
-                                    window.dispatchEvent(new CustomEvent("landing-help:open", { detail: { kind: "publish", deliverableId: d.id, projectId: p.id } }));
-                                  }}
-                                  className={`px-2 py-1 rounded text-white text-sm ${publishingProjectId === p.id ? "bg-gray-500 cursor-wait" : "bg-teal-600 hover:bg-teal-500"}`}
-                                  title="Publier via Nginx"
-                                >
-                                  {publishingProjectId === p.id ? "Publication…" : "Mettre en ligne"}
-                                </button>
-                              )}
-
-                              {isLanding && isPublished && (
-                                <>
-                                  <a href={publicUrl} target="_blank" rel="noreferrer" className="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm">
-                                    Ouvrir
-                                  </a>
-                                  <button
-                                    onClick={async () => { try { await navigator.clipboard.writeText(publicUrl); } catch {} }}
-                                    className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-white text-sm"
-                                    title="Copier l’URL"
-                                  >
-                                    Copier
-                                  </button>
-                                </>
-                              )}
-                            </div>
-
-                            {/* Actions mobile -> ⋯ */}
-                            <button
-                              onClick={() => openDelivSheet(d, p.id)}
-                              className="sm:hidden h-9 w-9 grid place-items-center rounded-lg bg-gray-800 text-white"
-                              aria-label="Actions"
-                              title="Actions"
-                            >
-                              ⋯
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                </ul>
+                <button
+                  disabled={loading}
+                  onClick={() => handleDeleteProject(p.id)}
+                  className="shrink-0 text-red-400 hover:text-red-600 text-sm"
+                  title="Supprimer le projet"
+                >
+                  🗑
+                </button>
               </div>
-            ))
-          )}
+
+              <ul className="grid sm:grid-cols-2 gap-3">
+                {(deliverablesMap[p.id] || [])
+                  .filter((d) => d.kind !== "landing_public")
+                  .map((d) => {
+                    const isLanding = d.kind === "landing";
+                    const publicUrl = d?.json_content?.public_url ?? null;
+                    const isPublished = Boolean(publicUrl);
+                    const isPlan = d.kind === "plan" || /plan d'action/i.test(d.title || "");
+                    const isBusinessPlan = d.kind === "business_plan" || d.kind === "model" || /business\s*plan/i.test(d.title || "");
+                    const isMarketing = d.kind === "marketing" || /marketing/i.test(d.title || "");
+                    const isBrand = d.kind === "brand" || d.kind === "branding" || /brand|branding|identité|charte/i.test(d.title || "");
+                    const isOffer = d.kind === "offer" || /offre|offer/i.test(d.title || "");
+
+                    const flags = { isLanding, isPlan, isBusinessPlan, isMarketing, isBrand, isOffer };
+
+                    return (
+                      <li key={d.id} className="bg-gray-600 p-3 rounded-lg">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="min-w-0">
+                            <p className="font-medium break-words">{d.title || d.kind}</p>
+                            <p className="text-xs text-gray-300">{new Date(d.created_at).toLocaleString()}</p>
+                          </span>
+
+                          {/* Actions desktop */}
+                          <div className="hidden sm:flex gap-2 items-center">
+                            <button
+                              onClick={() => openHelpPDFFor(d, p.id, flags)}
+                              className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-sm"
+                            >
+                              PDF
+                            </button>
+
+                            {d.has_file && (
+                              <button
+                                onClick={() => openHelpHTMLFor(d, p.id, flags)}
+                                className="px-2 py-1 bg-green-700 hover:bg-green-600 rounded text-white text-sm"
+                              >
+                                HTML
+                              </button>
+                            )}
+
+                            {isPlan && (
+                              <button
+                                onClick={() => onDownload(d, "ics")}
+                                className="px-2 py-1 bg-amber-600 hover:bg-amber-500 rounded text-white text-sm"
+                              >
+                                Agenda (.ics)
+                              </button>
+                            )}
+
+                            {isLanding && !isPublished && (
+                              <button
+                                disabled={!!publishingProjectId}
+                                onClick={async () => {
+                                  await handlePublishLanding(p.id);
+                                  window.dispatchEvent(new CustomEvent("landing-help:open", { detail: { kind: "publish", projectId: p.id, deliverableId: d.id } }));
+                                }}
+                                className={`px-2 py-1 rounded text-white text-sm ${publishingProjectId === p.id ? "bg-gray-500 cursor-wait" : "bg-teal-600 hover:bg-teal-500"}`}
+                                title="Publier via Nginx"
+                              >
+                                {publishingProjectId === p.id ? "Publication…" : "Mettre en ligne"}
+                              </button>
+                            )}
+
+                            {isLanding && isPublished && (
+                              <>
+                                <a href={publicUrl} target="_blank" rel="noreferrer" className="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm">
+                                  Ouvrir
+                                </a>
+                                <button
+                                  onClick={async () => { try { await navigator.clipboard.writeText(publicUrl); } catch {} }}
+                                  className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-white text-sm"
+                                  title="Copier l’URL"
+                                >
+                                  Copier
+                                </button>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Actions mobile -> ⋯ */}
+                          <button
+                            onClick={() => openDelivSheet(d, p.id)}
+                            className="sm:hidden h-9 w-9 grid place-items-center rounded-lg bg-gray-800 text-white"
+                            aria-label="Actions"
+                            title="Actions"
+                          >
+                            ⋯
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+              </ul>
+            </div>
+          ))
+        )}
         </section>
       </main>
 
       {/* Bottom sheet actions (mobile) */}
-{sheet.open && sheet.deliverable && (
-  <div className="fixed inset-0 z-50 md:hidden">
-    <div className="absolute inset-0 bg-black/50" onClick={closeDelivSheet} />
-    <div
-      className="absolute bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 rounded-t-2xl p-4 space-y-3"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
-    >
-      <div className="flex items-center justify-between">
-        <p className="font-semibold truncate">{sheet.deliverable.title || sheet.deliverable.kind}</p>
-        <button onClick={closeDelivSheet} className="p-2 rounded-lg bg-gray-700">✕</button>
-      </div>
+      {sheet.open && sheet.deliverable && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={closeDelivSheet} />
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 rounded-t-2xl p-4 space-y-3"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+          >
+            <div className="flex items-center justify-between">
+              <p className="font-semibold truncate">{sheet.deliverable.title || sheet.deliverable.kind}</p>
+              <button onClick={closeDelivSheet} className="p-2 rounded-lg bg-gray-700">✕</button>
+            </div>
 
-      {(() => {
-        const d = sheet.deliverable;
-        const isLanding      = d.kind === "landing";
-        const isPlan         = d.kind === "plan" || /plan d'action/i.test(d.title || "");
-        const isBusinessPlan = d.kind === "business_plan" || d.kind === "model" || /business\s*plan/i.test(d.title || "");
-        const isMarketing    = d.kind === "marketing" || /marketing/i.test(d.title || "");
-        const isBrand        = d.kind === "brand" || d.kind === "branding" || /brand|branding|identité|charte/i.test(d.title || "");
-        const isOffer        = d.kind === "offer" || /offre|offer/i.test(d.title || "");
-        const publicUrl      = d?.json_content?.public_url ?? null;
-        const isPublished    = Boolean(publicUrl);
+            {(() => {
+              const d = sheet.deliverable;
+              const flags = {
+                isLanding: d.kind === "landing",
+                isPlan: d.kind === "plan" || /plan d'action/i.test(d.title || ""),
+                isBusinessPlan: d.kind === "business_plan" || d.kind === "model" || /business\s*plan/i.test(d.title || ""),
+                isMarketing: d.kind === "marketing" || /marketing/i.test(d.title || ""),
+                isBrand: d.kind === "brand" || d.kind === "branding" || /brand|branding|identité|charte/i.test(d.title || ""),
+                isOffer: d.kind === "offer" || /offre|offer/i.test(d.title || ""),
+              };
+              const publicUrl = d?.json_content?.public_url ?? null;
+              const isPublished = Boolean(publicUrl);
 
-        const openPDFHelp = (after) => {
-          if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open",    { detail: { kind: "pdf",  after } }));
-          if (isMarketing)    window.dispatchEvent(new CustomEvent("mkt-help:open",   { detail: { kind: "pdf",  after } }));
-          if (isBrand)        window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "pdf",  after } }));
-          if (isOffer)        window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "pdf",  after } }));
-          if (isLanding)      window.dispatchEvent(new CustomEvent("landing-help:open", { detail: { kind: "pdf", after, deliverableId: d.id, projectId: sheet.projectId } }));
-        };
+              return (
+                <>
+                  <button
+                    onClick={() => { closeDelivSheet(); openHelpPDFFor(d, sheet.projectId, flags); }}
+                    className="w-full h-12 rounded-xl bg-indigo-600 text-white font-medium"
+                  >
+                    Télécharger PDF
+                  </button>
 
-        const openHTMLHelp = (after) => {
-          if (isLanding) {
-            window.dispatchEvent(new CustomEvent("landing-help:open", {
-              detail: { kind: "html", after, deliverableId: d.id, projectId: sheet.projectId }
-            }));
-          }
-          if (isBusinessPlan) window.dispatchEvent(new CustomEvent("bp-help:open",    { detail: { kind: "html", after } }));
-          if (isMarketing)    window.dispatchEvent(new CustomEvent("mkt-help:open",   { detail: { kind: "html", after } }));
-          if (isBrand)        window.dispatchEvent(new CustomEvent("brand-help:open", { detail: { kind: "html", after } }));
-          if (isOffer)        window.dispatchEvent(new CustomEvent("offer-help:open", { detail: { kind: "html", after } }));
-        };
+                  {d.has_file && (
+                    <button
+                      onClick={() => { closeDelivSheet(); openHelpHTMLFor(d, sheet.projectId, flags); }}
+                      className="w-full h-12 rounded-xl bg-green-700 text-white font-medium"
+                    >
+                      Télécharger HTML
+                    </button>
+                  )}
 
-        return (
-          <>
-            <button
-              onClick={() => { closeDelivSheet(); openPDFHelp(() => onDownload(d, "pdf")); }}
-              className="w-full h-12 rounded-xl bg-indigo-600 text-white font-medium"
-            >
-              Télécharger PDF
-            </button>
+                  {flags.isPlan && (
+                    <button
+                      onClick={() => { onDownload(d, "ics"); closeDelivSheet(); }}
+                      className="w-full h-12 rounded-xl bg-amber-600 text-white font-medium"
+                    >
+                      Ajouter à l’agenda (.ics)
+                    </button>
+                  )}
 
-            {d.has_file && (
-              <button
-                onClick={() => { closeDelivSheet(); openHTMLHelp(() => onDownload(d, "html")); }}
-                className="w-full h-12 rounded-xl bg-green-700 text-white font-medium"
-              >
-                Télécharger HTML
-              </button>
-            )}
+                  {flags.isLanding && !isPublished && (
+                    <button
+                      onClick={async () => { await handlePublishLanding(sheet.projectId); closeDelivSheet(); }}
+                      className="w-full h-12 rounded-xl bg-teal-600 text-white font-medium"
+                    >
+                      Mettre en ligne
+                    </button>
+                  )}
 
-            {isPlan && (
-              <button
-                onClick={() => { onDownload(d, "ics"); closeDelivSheet(); }}
-                className="w-full h-12 rounded-xl bg-amber-600 text-white font-medium"
-              >
-                Ajouter à l’agenda (.ics)
-              </button>
-            )}
-
-            {isLanding && !isPublished && (
-              <button
-                onClick={async () => { await handlePublishLanding(sheet.projectId); closeDelivSheet(); }}
-                className="w-full h-12 rounded-xl bg-teal-600 text-white font-medium"
-              >
-                Mettre en ligne
-              </button>
-            )}
-
-            {isLanding && isPublished && (
-              <div className="grid grid-cols-2 gap-2">
-                <a href={publicUrl} target="_blank" rel="noreferrer" className="h-12 grid place-items-center rounded-xl bg-blue-600 text-white font-medium">
-                  Ouvrir
-                </a>
-                <button
-                  onClick={async () => { try { await navigator.clipboard.writeText(publicUrl); } catch {} closeDelivSheet(); }}
-                  className="h-12 rounded-xl bg-gray-700 text-white font-medium"
-                >
-                  Copier l’URL
-                </button>
-              </div>
-            )}
-          </>
-        );
-      })()}
-    </div>
-  </div>
-)}
+                  {flags.isLanding && isPublished && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <a href={publicUrl} target="_blank" rel="noreferrer" className="h-12 grid place-items-center rounded-xl bg-blue-600 text-white font-medium">
+                        Ouvrir
+                      </a>
+                      <button
+                        onClick={async () => { try { await navigator.clipboard.writeText(publicUrl); } catch {} closeDelivSheet(); }}
+                        className="h-12 rounded-xl bg-gray-700 text-white font-medium"
+                      >
+                        Copier l’URL
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* ⬇️ Popup d’offres */}
       <OffersModal
@@ -851,6 +910,7 @@ export default function DashboardPage() {
         onBuyStartNow={handleBuyStartNow}
       />
 
+      {/* Modals d'aide */}
       <LandingHelp />
       <BusinessPlanHelp />
       <MarketingHelp />
